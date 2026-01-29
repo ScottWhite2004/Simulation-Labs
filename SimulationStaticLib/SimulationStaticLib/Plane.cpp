@@ -10,3 +10,8 @@ bool Plane::Intersects(const Line& line) const
 {
     return false;
 }
+
+float Plane::ShortestDistanceToPoint(const glm::vec3& point) const
+{
+    
+}

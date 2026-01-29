@@ -11,5 +11,13 @@ public:
 
 	virtual bool Intersects(const Line& line) const override;
 
+	float ShortestDistanceToPoint(const glm::vec3& point) const;
+
+	Plane(const glm::vec3& position, const glm::vec3& normal)
+		: _Normal(normal)
+	{
+		_Position = position;
+	}
+
 };
 
