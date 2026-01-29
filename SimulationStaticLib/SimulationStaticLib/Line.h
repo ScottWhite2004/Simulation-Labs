@@ -3,13 +3,12 @@
 class Line
 {
 	glm::vec3 _Direction;
-	float _Length;
-	glm::vec3 _startingPoint;
+	glm::vec3 _pointOnLine;
 
 public:
 
-	Line(const glm::vec3& startingPoint, const glm::vec3& direction, float length)
-		: _startingPoint(startingPoint), _Direction(direction), _Length(length)
+	Line(const glm::vec3& pointOnLine, const glm::vec3& direction)
+		: _pointOnLine(pointOnLine), _Direction(direction)
 	{
 	}
 
