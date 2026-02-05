@@ -71,7 +71,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationStaticLib\Include;$(IncludePath)</IncludePath>
+    <IncludePath>E:\UniTemp\Simulation-Labs\SimulationStaticLib\SimulationStaticLib\Include;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationStaticLib\Include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

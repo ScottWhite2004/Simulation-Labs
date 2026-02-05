@@ -13,5 +13,9 @@ bool Plane::Intersects(const Line& line) const
 
 float Plane::ShortestDistanceToPoint(const glm::vec3& point) const
 {
-    
+	glm::vec3 normalizedNormal = glm::normalize(_Normal);
+	float distance = glm::dot(normalizedNormal, point - _Position);
+	distance = roundf(distance * 100.0f) / 100.0f;
+	return distance;
 }
+

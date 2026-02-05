@@ -1,6 +1,7 @@
 #pragma once
 #include <glm/glm.hpp>
 #include "Collider.h"
+#include "Plane.h"
 
 class Sphere : public Collider
 {
@@ -20,6 +21,8 @@ public:
 	virtual bool Intersects(const Line& line) const override;
 
 	bool CollidesWith(const Sphere& other) const;
+
+	bool CollidesWith(const Plane& other) const;
 
 };
 

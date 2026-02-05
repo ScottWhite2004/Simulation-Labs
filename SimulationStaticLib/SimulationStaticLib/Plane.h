@@ -1,5 +1,6 @@
 #pragma once
 #include "Collider.h"
+#include "Sphere.h"
 
 class Plane : public Collider
 {
@@ -10,6 +11,8 @@ public:
 	virtual bool IsInside(const glm::vec3& point) const override;
 
 	virtual bool Intersects(const Line& line) const override;
+
+	bool CollidesWith(const Sphere& sphere) const;
 
 	float ShortestDistanceToPoint(const glm::vec3& point) const;
 

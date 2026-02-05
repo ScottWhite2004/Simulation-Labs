@@ -21,3 +21,9 @@ bool Sphere::CollidesWith(const Sphere& other) const
 	float radiusSum = _Radius + other._Radius;
 	return distanceSquared <= (radiusSum * radiusSum);
 }
+
+bool Sphere::CollidesWith(const Plane& other) const
+{
+	float distance = other.ShortestDistanceToPoint(_Position);
+	return fabs(distance) <= _Radius;
+}
