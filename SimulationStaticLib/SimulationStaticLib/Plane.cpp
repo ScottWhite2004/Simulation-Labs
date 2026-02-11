@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "Plane.h"
 
+
 bool Plane::IsInside(const glm::vec3& point) const
 {
     return false;
@@ -16,6 +17,6 @@ float Plane::ShortestDistanceToPoint(const glm::vec3& point) const
 	glm::vec3 normalizedNormal = glm::normalize(_Normal);
 	float distance = glm::dot(normalizedNormal, point - _Position);
 	distance = roundf(distance * 100.0f) / 100.0f;
-	return distance;
+	return  fabs(distance);
 }
 

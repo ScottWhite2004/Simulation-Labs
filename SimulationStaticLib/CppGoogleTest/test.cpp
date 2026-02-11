@@ -113,6 +113,139 @@ TEST(SphereLineIntersection, IntersectsSphereLinePassesThroughSphereCentre)
 	EXPECT_TRUE(sphere.Intersects(line));
 }
 
+TEST(ShortestDistanceToPlane, PointAbovePlane)
+{
+	Plane plane(glm::vec3(0, 0, 0), glm::vec3(0, 0, 1));
+	glm::vec3 point(2, 3, 5);
+	float distance = plane.ShortestDistanceToPoint(point);
+	EXPECT_EQ(distance, 5.0f);
+}
+
+TEST(ShortestDistanceToPlane, PointBelowPlane)
+{
+	Plane plane(glm::vec3(0, 0, 0), glm::vec3(0, 0, 1));
+	glm::vec3 point(2, 3, -4);
+	float distance = plane.ShortestDistanceToPoint(point);
+	EXPECT_EQ(distance, 4.0f);
+}
+
+TEST(ShortestDistanceToPlane, PointOnPlane)
+{
+	Plane plane(glm::vec3(1, 1, 1),  1/sqrtf(3) * glm::vec3(1, 1, 1));
+	glm::vec3 point(0, 2, 1);
+	float distance = plane.ShortestDistanceToPoint(point);
+	EXPECT_EQ(distance, 0.0f);
+}
+
+TEST(ShortestDistanceToPlane, PointCloseToPlane)
+{
+	Plane plane(glm::vec3(0, 0, 0), 1/sqrtf(2) * glm::vec3(1, 1, 0));
+	glm::vec3 point(1, 1, 1);
+	float distance = plane.ShortestDistanceToPoint(point);
+	EXPECT_EQ(distance, 1.41f);
+}
+
+TEST(ShortestDistanceToPlane, PointWithNegativeCoordinates)
+{
+	Plane plane(glm::vec3(-2, -2, -2), 1/sqrtf(3) * glm::vec3(1, 1, 1));
+	glm::vec3 point(-1, -1, -1);
+	float distance = plane.ShortestDistanceToPoint(point);
+	EXPECT_EQ(distance, 1.73f);
+}
+
+TEST(ShortestDistanceToPlane, PointAlongNormalVectorDirection)
+{
+	Plane plane(glm::vec3(0, 0, 0), 1/sqrtf(2) * glm::vec3(1, 1, 0));
+	glm::vec3 point(1, 1, 0);
+	float distance = plane.ShortestDistanceToPoint(point);
+	EXPECT_EQ(distance, 1.41f);
+}
+
+TEST(ShortestDistanceToPlane, PointNearPlaneInRandomDirection)
+{
+	Plane plane(glm::vec3(0, 0, 0),  1/sqrtf(2) * glm::vec3(1, -1, 0));
+	glm::vec3 point(1, 2, 3);
+	float distance = plane.ShortestDistanceToPoint(point);
+	EXPECT_EQ(distance, 0.71f);
+}
+
+TEST(SpherePlaneCollision, NoIntersectionSphereAbovePlane)
+{
+	Plane plane(glm::vec3(0, 0, 0), glm::vec3(0, 0, 1)); 
+	Sphere sphere(glm::vec3(0, 0, 5), 4);               
+	EXPECT_FALSE(sphere.CollidesWith(plane));
+}
+
+TEST(SpherePlaneCollision, TangentTouchingSphereAbovePlane)
+{
+	Plane plane(glm::vec3(0, 0, 0), glm::vec3(0, 0, 1)); 
+	Sphere sphere(glm::vec3(0, 0, 5), 5);               
+	EXPECT_TRUE(sphere.CollidesWith(plane));
+}
+
+TEST(SpherePlaneCollision, IntersectingSphereAbovePlane)
+{
+	Plane plane(glm::vec3(0, 0, 0), glm::vec3(0, 0, 1)); 
+	Sphere sphere(glm::vec3(0, 0, 3), 5);               
+	EXPECT_TRUE(sphere.CollidesWith(plane));
+}
+
+TEST(SpherePlaneCollision, CentreOnPlane)
+{
+	Plane plane(glm::vec3(1, 1, 1), 1 / sqrtf(3) * glm::vec3(1, 1, 1));
+	Sphere sphere(glm::vec3(0, 2, 1), 1); 
+	EXPECT_TRUE(sphere.CollidesWith(plane));
+}
+
+TEST(SpherePlaneCollision, NoIntersectionSphereBelowPlane)
+{
+	Plane plane(glm::vec3(0, 0, 1), glm::vec3(0, 0, 1)); 
+	Sphere sphere(glm::vec3(0, 0, -5), 5);               
+	EXPECT_FALSE(sphere.CollidesWith(plane));
+}
+
+TEST(SpherePlaneCollision, TangentTouchingSphereBelowPlane)
+{
+	Plane plane(glm::vec3(0, 0, 1), glm::vec3(0, 0, 1));
+	Sphere sphere(glm::vec3(0, 0, -4), 5);
+	EXPECT_TRUE(sphere.CollidesWith(plane));
+}
+
+TEST(SpherePlaneCollision, IntersectingWithSkewedPlaneAdjustedRadius)
+{
+	Plane plane(glm::vec3(0, 0, 0), 1 / sqrtf(2) * glm::vec3(1, 1, 0));
+	Sphere sphere(glm::vec3(1, 1, 0), 1.5f);
+	EXPECT_TRUE(sphere.CollidesWith(plane));
+}
+
+TEST(SpherePlaneCollision, NoIntersectionWithSkewedPlaneAdjustedRadius)
+{
+	Plane plane(glm::vec3(0, 0, 0), 1 / sqrtf(2) * glm::vec3(1, -1, 0)); 
+	Sphere sphere(glm::vec3(1, 2, 3), 0.5f); 
+	EXPECT_FALSE(sphere.CollidesWith(plane));
+}
+
+TEST(SpherePlaneCollision, IntersectsWithSkewedPlaneAdjustedRadius)
+{
+	Plane plane(glm::vec3(0, 0, 0), 1 / sqrtf(2) * glm::vec3(1, -1, 0)); 
+	Sphere sphere(glm::vec3(1, 2, 3), 1.0f); 
+	EXPECT_TRUE(sphere.CollidesWith(plane));
+}
+
+TEST(SpherePlaneCollision, NonNormalizedPlaneNormalHandled)
+{
+	Plane plane(glm::vec3(0, 0, 0), glm::vec3(0, 0, 10)); 
+	Sphere sphere(glm::vec3(0, 0, 0.9f), 1.0f);          
+	EXPECT_TRUE(sphere.CollidesWith(plane));
+}
+
+TEST(SpherePlaneCollision, LargeRadiusAlwaysCollidesWithPlane)
+{
+	Plane plane(glm::vec3(10, 10, 10), glm::vec3(0, 0, 1));
+	Sphere sphere(glm::vec3(-100, -100, -100), 1000.0f);
+	EXPECT_TRUE(sphere.CollidesWith(plane));
+}
+
 
 
 

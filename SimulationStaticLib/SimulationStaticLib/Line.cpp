@@ -9,5 +9,5 @@ float Line::ShortestDistanceToPoint(const glm::vec3& point) const
 	glm::vec3 closestPointOnLine = _pointOnLine + t * normalizedDirection;
 	float shortestDistance = glm::length(point - closestPointOnLine);
 	shortestDistance = roundf(shortestDistance * 100.0f) / 100.0f;
-	return shortestDistance;
+	return fabs(shortestDistance);
 }
