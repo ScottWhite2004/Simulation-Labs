@@ -71,19 +71,19 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui\backends;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui\backends\vulkan;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\GLFW\include;C:\VulkanSDK\1.4.313.2\Include;C:\VulkanSDK\1.4.313.2\Include;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\GLFW\include;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationStaticLib;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui\backends;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui\backends\vulkan;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\GLFW\include;C:\VulkanSDK\1.4.313.2\Include;C:\VulkanSDK\1.4.313.2\Include;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\GLFW\include;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\GLFW\lib-vc2022;C:\VulkanSDK\1.4.313.2\Lib;C:\VulkanSDK\1.4.313.2\Lib;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\GLFW\lib-vc2022;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui\backends;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui\backends\vulkan;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\GLFW\include;C:\VulkanSDK\1.4.313.2\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationStaticLib;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui\backends;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui\backends\vulkan;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\GLFW\include;C:\VulkanSDK\1.4.313.2\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <LibraryPath>C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\GLFW\lib-vc2022;C:\VulkanSDK\1.4.313.2\Lib;$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui\backends;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui\backends\vulkan;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\GLFW\include;C:\VulkanSDK\1.4.313.2\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationStaticLib;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui\backends;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui\backends\vulkan;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\GLFW\include;C:\VulkanSDK\1.4.313.2\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <LibraryPath>C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\GLFW\lib-vc2022;C:\VulkanSDK\1.4.313.2\Lib;$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui\backends;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui\backends\vulkan;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\GLFW\include;C:\VulkanSDK\1.4.313.2\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationStaticLib;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui\backends;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui\backends\vulkan;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\GLFW\include;C:\VulkanSDK\1.4.313.2\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
     <LibraryPath>C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\GLFW\lib-vc2022;C:\VulkanSDK\1.4.313.2\Lib;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -145,18 +145,34 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Application.h" />
+    <ClInclude Include="Capsule.h" />
+    <ClInclude Include="Cube.h" />
+    <ClInclude Include="Cylinder.h" />
+    <ClInclude Include="Material.h" />
     <ClInclude Include="Scenario.h" />
+    <ClInclude Include="Shape.h" />
+    <ClInclude Include="Sphere.h" />
+    <ClInclude Include="Vertex.h" />
+    <ClInclude Include="VulkanContext.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Application.cpp" />
+    <ClCompile Include="Capsule.cpp" />
+    <ClCompile Include="Cube.cpp" />
+    <ClCompile Include="Cylinder.cpp" />
     <ClCompile Include="Include\imgui\backends\imgui_impl_glfw.cpp" />
     <ClCompile Include="Include\imgui\backends\imgui_impl_vulkan.cpp" />
     <ClCompile Include="Include\imgui\imgui.cpp" />
     <ClCompile Include="Include\imgui\imgui_draw.cpp" />
     <ClCompile Include="Include\imgui\imgui_tables.cpp" />
     <ClCompile Include="Include\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="Material.cpp" />
     <ClCompile Include="Scenario.cpp" />
+    <ClCompile Include="Shape.cpp" />
     <ClCompile Include="Source.cpp" />
+    <ClCompile Include="Sphere.cpp" />
+    <ClCompile Include="Vertex.cpp" />
+    <ClCompile Include="VulkanContext.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

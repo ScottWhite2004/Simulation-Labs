@@ -939,6 +939,16 @@ void HelloTriangleApplication::drawFrame() {
             {
 				simulationRunning = !simulationRunning;
             }
+			ImGui::SameLine();
+			if(ImGui::Button("Step Forward"));
+            {
+
+            }
+			ImGui::SameLine();
+            if(ImGui::Button("Step Backward"))
+            {
+			
+            }
 			ImGui::InputFloat("timestep", &simulationTimeStep);
             ImGui::EndMenu();
         }
