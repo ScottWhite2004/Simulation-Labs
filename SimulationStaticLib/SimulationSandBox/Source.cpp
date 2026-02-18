@@ -142,6 +142,15 @@ private:
     bool framebufferResized = false;
     uint32_t currentFrame = 0;
 
+    //Colour Controlled From ImGui
+	ImVec4 uiClearColour = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+
+    //Timestep controlled by imgui
+    float simulationTimeStep = 0.0f;
+
+	//Stop and starting simulation controlled by imgui
+	bool simulationRunning = false;
+
     // --- Vulkan Core Components ---
     VkInstance instance = VK_NULL_HANDLE;
     VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
@@ -901,10 +910,41 @@ void HelloTriangleApplication::drawFrame() {
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 
-    //Example UI
-	ImGui::Begin("Hello, ImGui!");
-	ImGui::Text("This is a simple Vulkan application with ImGui integration.");
-	ImGui::End();
+    if (ImGui::BeginMainMenuBar())
+    {
+        if (ImGui::BeginMenu("Scenario"))
+        {
+            if (ImGui::MenuItem("Clear Colour Scenario"))
+            {
+
+            }
+			ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Colour"))
+        {
+			ImGui::ColorPicker4("Clear Colour", (float*)&uiClearColour);
+			ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Camera"))
+        {
+			ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Material"))
+        {
+			ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Simulation"))
+        {
+            if (ImGui::Button(simulationRunning ? "Stop" : "Start"))
+            {
+				simulationRunning = !simulationRunning;
+            }
+			ImGui::InputFloat("timestep", &simulationTimeStep);
+            ImGui::EndMenu();
+        }
+
+		ImGui::EndMainMenuBar();
+    }
 
 	ImGui::Render();
 
@@ -1010,7 +1050,7 @@ void HelloTriangleApplication::recordCommandBuffer(VkCommandBuffer commandBuffer
     colorAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    colorAttachment.clearValue.color = { {0.0f, 0.0f, 0.0f, 1.0f} };
+    colorAttachment.clearValue.color = { {uiClearColour.x, uiClearColour.y, uiClearColour.z, uiClearColour.w} };
 
     VkRenderingInfo renderingInfo{};
     renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
