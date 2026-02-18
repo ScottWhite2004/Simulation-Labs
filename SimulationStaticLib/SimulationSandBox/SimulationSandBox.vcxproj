@@ -17,7 +17,6 @@
       <Configuration>Release</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
-
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
@@ -53,27 +52,40 @@
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
-
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
-  <ImportGroup Label="Shared" >
+  <ImportGroup Label="Shared">
   </ImportGroup>
-    <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-      <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    </ImportGroup>
-    <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-      <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    </ImportGroup>
-    <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    </ImportGroup>
-    <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    </ImportGroup>
-
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IncludePath>C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui\backends;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui\backends\vulkan;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\GLFW\include;C:\VulkanSDK\1.4.313.2\Include;C:\VulkanSDK\1.4.313.2\Include;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\GLFW\include;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\GLFW\lib-vc2022;C:\VulkanSDK\1.4.313.2\Lib;C:\VulkanSDK\1.4.313.2\Lib;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\GLFW\lib-vc2022;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <IncludePath>C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui\backends;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui\backends\vulkan;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\GLFW\include;C:\VulkanSDK\1.4.313.2\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <LibraryPath>C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\GLFW\lib-vc2022;C:\VulkanSDK\1.4.313.2\Lib;$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <IncludePath>C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui\backends;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui\backends\vulkan;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\GLFW\include;C:\VulkanSDK\1.4.313.2\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <LibraryPath>C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\GLFW\lib-vc2022;C:\VulkanSDK\1.4.313.2\Lib;$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IncludePath>C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui\backends;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui\backends\vulkan;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\GLFW\include;C:\VulkanSDK\1.4.313.2\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <LibraryPath>C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\GLFW\lib-vc2022;C:\VulkanSDK\1.4.313.2\Lib;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -83,7 +95,8 @@
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>vulkan-1.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -97,7 +110,8 @@
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>vulkan-1.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -106,10 +120,12 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>vulkan-1.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -123,11 +139,25 @@
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>vulkan-1.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
-
-  <ItemGroup></ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Application.h" />
+    <ClInclude Include="Scenario.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Application.cpp" />
+    <ClCompile Include="Include\imgui\backends\imgui_impl_glfw.cpp" />
+    <ClCompile Include="Include\imgui\backends\imgui_impl_vulkan.cpp" />
+    <ClCompile Include="Include\imgui\imgui.cpp" />
+    <ClCompile Include="Include\imgui\imgui_draw.cpp" />
+    <ClCompile Include="Include\imgui\imgui_tables.cpp" />
+    <ClCompile Include="Include\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="Scenario.cpp" />
+    <ClCompile Include="Source.cpp" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
