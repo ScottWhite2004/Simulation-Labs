@@ -76,7 +76,7 @@ namespace
 Shape::~Shape() = default;
 
 Shape::Shape(Shape&& other)
-	: GraphicsObject(std::move(other)),
+	: PhysicsObject(std::move(other)),
 	_vertices(std::move(other._vertices)),
 	_indices(std::move(other._indices)),
 	_uniformBuffers(std::move(other._uniformBuffers)),
@@ -97,7 +97,7 @@ Shape::Shape(Shape&& other)
 
 Shape& Shape::operator=(Shape&& other) {
 	if (this != &other) {
-		GraphicsObject::operator=(std::move(other));
+		PhysicsObject::operator=(std::move(other));
 		_vertices = std::move(other._vertices);
 		_indices = std::move(other._indices);
 		_uniformBuffers = std::move(other._uniformBuffers);
@@ -118,7 +118,7 @@ Shape& Shape::operator=(Shape&& other) {
 }
 
 Shape::Shape(const Shape& other)
-	: GraphicsObject(other),
+	: PhysicsObject(other),
 	_vertices(other._vertices),
 	_indices(other._indices),
 	_material(other._material)
@@ -137,7 +137,7 @@ Shape& Shape::operator=(const Shape& other) {
 		_indexBuffer = VK_NULL_HANDLE;
 		_indexBufferMemory = VK_NULL_HANDLE;
 
-		GraphicsObject::operator=(other);
+		PhysicsObject::operator=(other);
 		_vertices = other._vertices;
 		_indices = other._indices;
 		_material = other._material;

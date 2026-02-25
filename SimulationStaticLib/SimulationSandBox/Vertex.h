@@ -45,3 +45,4 @@ struct Vertex
         return attributeDescriptions;
     }
 
+};

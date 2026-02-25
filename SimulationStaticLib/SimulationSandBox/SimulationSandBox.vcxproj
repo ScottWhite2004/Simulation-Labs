@@ -145,34 +145,67 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Application.h" />
+    <ClInclude Include="Camera.h" />
+    <ClInclude Include="CameraManager.h" />
     <ClInclude Include="Capsule.h" />
     <ClInclude Include="Cube.h" />
     <ClInclude Include="Cylinder.h" />
+    <ClInclude Include="GraphicsPipelineBuilder.h" />
+    <ClInclude Include="Image.h" />
+    <ClInclude Include="Light.h" />
+    <ClInclude Include="LightingSystem.h" />
     <ClInclude Include="Material.h" />
+    <ClInclude Include="PipelineManager.h" />
+    <ClInclude Include="Plane.h" />
+    <ClInclude Include="QueueFamilyIndices.h" />
+    <ClInclude Include="RenderPassManager.h" />
     <ClInclude Include="Scenario.h" />
     <ClInclude Include="Shape.h" />
     <ClInclude Include="Sphere.h" />
+    <ClInclude Include="SwapChainManager.h" />
+    <ClInclude Include="SwapChainSupportDetails.h" />
+    <ClInclude Include="SyncManager.h" />
+    <ClInclude Include="Texture.h" />
+    <ClInclude Include="textureManager.h" />
     <ClInclude Include="Vertex.h" />
     <ClInclude Include="VulkanContext.h" />
+    <ClInclude Include="WindowManager.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Application.cpp" />
+    <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="CameraManager.cpp" />
     <ClCompile Include="Capsule.cpp" />
     <ClCompile Include="Cube.cpp" />
     <ClCompile Include="Cylinder.cpp" />
+    <ClCompile Include="GraphicsPipelineBuilder.cpp" />
+    <ClCompile Include="Image.cpp" />
     <ClCompile Include="Include\imgui\backends\imgui_impl_glfw.cpp" />
     <ClCompile Include="Include\imgui\backends\imgui_impl_vulkan.cpp" />
     <ClCompile Include="Include\imgui\imgui.cpp" />
     <ClCompile Include="Include\imgui\imgui_draw.cpp" />
     <ClCompile Include="Include\imgui\imgui_tables.cpp" />
     <ClCompile Include="Include\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="Light.cpp" />
+    <ClCompile Include="LightingSystem.cpp" />
     <ClCompile Include="Material.cpp" />
+    <ClCompile Include="PipelineManager.cpp" />
+    <ClCompile Include="Plane.cpp" />
+    <ClCompile Include="QueueFamilyIndices.cpp" />
+    <ClCompile Include="RenderPassManager.cpp" />
     <ClCompile Include="Scenario.cpp" />
     <ClCompile Include="Shape.cpp" />
     <ClCompile Include="Source.cpp" />
     <ClCompile Include="Sphere.cpp" />
+    <ClCompile Include="stb_image.cpp" />
+    <ClCompile Include="SwapChainManager.cpp" />
+    <ClCompile Include="SwapChainSupportDetails.cpp" />
+    <ClCompile Include="SyncManager.cpp" />
+    <ClCompile Include="Texture.cpp" />
+    <ClCompile Include="textureManager.cpp" />
     <ClCompile Include="Vertex.cpp" />
     <ClCompile Include="VulkanContext.cpp" />
+    <ClCompile Include="WindowManager.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
