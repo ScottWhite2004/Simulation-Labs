@@ -222,12 +222,27 @@ public:
         return *this;
     }
 
-    GraphicsPipelineBuilder& setDynamicRendering(const VkPipelineRenderingCreateInfo& info) {
+    GraphicsPipelineBuilder& setDynamicRendering(
+        const VkFormat* colorAttachmentFormats,
+        uint32_t colorAttachmentCount,
+        VkFormat depthFormat = VK_FORMAT_UNDEFINED,
+        VkFormat stencilFormat = VK_FORMAT_UNDEFINED,
+        uint32_t viewMask = 0)
+    {
+        VkPipelineRenderingCreateInfo info{};
+        info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+        info.pNext = nullptr;
+        info.viewMask = viewMask;
+        info.colorAttachmentCount = colorAttachmentCount;
+        info.pColorAttachmentFormats = colorAttachmentFormats;
+        info.depthAttachmentFormat = depthFormat;
+        info.stencilAttachmentFormat = stencilFormat;
         dynamicRenderingInfo = info;
         return *this;
     }
 
     VkPipeline build() {
+        // Basic invariants
         if (device == VK_NULL_HANDLE || pipelineLayout == VK_NULL_HANDLE) {
             throw std::runtime_error("GraphicsPipelineBuilder: device and pipelineLayout must be set.");
         }
@@ -238,47 +253,69 @@ public:
             throw std::runtime_error("GraphicsPipelineBuilder: renderPass must be set unless using dynamic rendering.");
         }
 
-        if (inputAssembly.sType == 0) setInputAssembly(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-        if (raster.sType == 0) setRasterFill(VK_POLYGON_MODE_FILL, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
-        if (multisample.sType == 0) setMultisample(VK_SAMPLE_COUNT_1_BIT);
+        // Ensure required create-info structs are initialized
+        if (inputAssembly.sType == 0) {
+            setInputAssembly(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+        }
+        if (raster.sType == 0) {
+            setRasterFill(VK_POLYGON_MODE_FILL, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
+        }
+        if (multisample.sType == 0) {
+            setMultisample(VK_SAMPLE_COUNT_1_BIT);
+        }
         if (colorBlend.sType == 0) {
-            if (colorBlendAttachments.empty()) addColorBlendAttachment(VK_FALSE);
+            if (colorBlendAttachments.empty()) {
+                addColorBlendAttachment(VK_FALSE);
+            }
             setColorBlendLogic(VK_FALSE);
         }
         if (viewportState.sType == 0) {
+            // If user did not specify viewport/scissor, use dynamic viewport & scissor
+            viewportState = {};
             viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
             viewportState.viewportCount = 1;
+            viewportState.pViewports = nullptr;
             viewportState.scissorCount = 1;
-            dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+            viewportState.pScissors = nullptr;
+
+            if (dynamicStates.empty()) {
+                dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+            }
         }
 
+        // Dynamic state create-info (optional)
         VkPipelineDynamicStateCreateInfo dyn{};
         dyn.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+        dyn.pNext = nullptr;
+        dyn.flags = 0;
         dyn.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
         dyn.pDynamicStates = dynamicStates.empty() ? nullptr : dynamicStates.data();
 
+        // Viewport state (local copy so we can safely tweak pNext if needed)
         VkPipelineViewportStateCreateInfo vp = viewportState;
         vp.pNext = nullptr;
 
+        // Optional tessellation state
         VkPipelineTessellationStateCreateInfo* pTess = nullptr;
         if (tessellation.has_value()) {
-            VkPipelineTessellationStateCreateInfo tess{};
-            tess = *tessellation;
-            pTess = &tess;
+            // The optional contains a fully initialized struct
+            pTess = &tessellation.value();
         }
 
+        // Optional depth-stencil state
         VkPipelineDepthStencilStateCreateInfo* pDS = nullptr;
         if (depthStencil.has_value()) {
-            VkPipelineDepthStencilStateCreateInfo ds{};
-            ds = *depthStencil;
-            pDS = &ds;
+            pDS = &depthStencil.value();
         }
 
+        // Graphics pipeline CI
         VkGraphicsPipelineCreateInfo gpci{};
         gpci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+        gpci.pNext = nullptr;
+        gpci.flags = 0;
         gpci.stageCount = static_cast<uint32_t>(shaderStages.size());
         gpci.pStages = shaderStages.data();
-        gpci.pVertexInputState = &vertexInput;
+        gpci.pVertexInputState = &vertexInput;    // must be fully initialized by caller or via MakeDefaultVertexInput
         gpci.pInputAssemblyState = &inputAssembly;
         gpci.pTessellationState = pTess;
         gpci.pViewportState = &vp;
@@ -288,21 +325,35 @@ public:
         gpci.pColorBlendState = &colorBlend;
         gpci.pDynamicState = dynamicStates.empty() ? nullptr : &dyn;
         gpci.layout = pipelineLayout;
-        gpci.renderPass = renderPass;
-        gpci.subpass = 0;
 
+        // Either classic render pass or dynamic rendering
+        VkPipelineRenderingCreateInfo renderingInfo{};
         if (dynamicRenderingInfo.has_value()) {
-            VkPipelineRenderingCreateInfo renderingInfo{};
             renderingInfo = *dynamicRenderingInfo;
+            // Force correct sType and pNext
             renderingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+            renderingInfo.pNext = nullptr;
+
+            // Validate some critical fields (debug-time sanity)
+            if (renderingInfo.colorAttachmentCount > 0 && renderingInfo.pColorAttachmentFormats == nullptr) {
+                throw std::runtime_error("GraphicsPipelineBuilder: dynamicRenderingInfo has colorAttachmentCount > 0 but pColorAttachmentFormats is null.");
+            }
+
             gpci.pNext = &renderingInfo;
             gpci.renderPass = VK_NULL_HANDLE;
+            gpci.subpass = 0;
+        }
+        else {
+            gpci.pNext = nullptr;
+            gpci.renderPass = renderPass;
+            gpci.subpass = 0;
         }
 
         const VkResult res = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &gpci, nullptr, &pipeline);
         if (res != VK_SUCCESS) {
             throw std::runtime_error("vkCreateGraphicsPipelines failed.");
         }
+
         return pipeline;
     }
 

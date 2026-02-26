@@ -226,6 +226,20 @@ void HelloTriangleApplication::initVulkan() {
 	_renderPassManager.createRenderPass();
 	_pipelineManager.initialize(&_vulkanContext, &_renderPassManager, &_swapChainManager);
 
+    VkDescriptorSetLayoutBinding uboBinding{};
+    uboBinding.binding = 0;
+    uboBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    uboBinding.descriptorCount = 1;
+    uboBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; // or both vertex/fragment if needed
+    uboBinding.pImmutableSamplers = nullptr;
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo{};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = 1;
+    layoutInfo.pBindings = &uboBinding;
+
+	_vulkanContext.createDescriptorSetLayout(layoutInfo);
+
     std::vector<VkDescriptorSetLayout> setLayouts;
 	setLayouts.push_back(_vulkanContext.getDescriptorSetLayout());
 	_pipelineManager.createPipelineLayout(setLayouts);
@@ -277,7 +291,7 @@ void HelloTriangleApplication::initImGui() {
     initInfo.Instance = _vulkanContext.getInstance();
     initInfo.PhysicalDevice = _vulkanContext.getPhysicalDevice();
     initInfo.Device = _vulkanContext.getDevice();
-	initInfo.QueueFamily = _vulkanContext.findQueueFamilies(_vulkanContext.getPhysicalDevice()).graphicsFamily.value();
+    initInfo.QueueFamily = _vulkanContext.findQueueFamilies(_vulkanContext.getPhysicalDevice()).graphicsFamily.value();
     initInfo.Queue = _vulkanContext.getGraphicsQueue();
     initInfo.PipelineCache = VK_NULL_HANDLE;
     initInfo.DescriptorPool = imguiDescriptorPool;
@@ -287,18 +301,12 @@ void HelloTriangleApplication::initImGui() {
     initInfo.Allocator = nullptr;
     initInfo.CheckVkResultFn = nullptr;
 
-    // Describe the color attachment format used with vkCmdBeginRendering
-    initInfo.PipelineInfoMain.PipelineRenderingCreateInfo = {};
-    initInfo.PipelineInfoMain.PipelineRenderingCreateInfo.sType =
-        VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
-    initInfo.PipelineInfoMain.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
-	VkFormat colorAttachmentFormat = _swapChainManager.getImageFormat();
-	initInfo.PipelineInfoMain.PipelineRenderingCreateInfo.pColorAttachmentFormats = &colorAttachmentFormat;
+    // Use classic render pass instead of dynamic rendering
+    initInfo.PipelineInfoMain.RenderPass = _renderPassManager.getRenderPass();
+    initInfo.PipelineInfoMain.Subpass = 0;
+    // Optionally: initInfo.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
     ImGui_ImplVulkan_Init(&initInfo);
-
-    // Let backend create fonts texture on first NewFrame()
-    // No need to record/upload fonts here anymore.
 }
 
 void HelloTriangleApplication::cleanupImGui() {
@@ -513,7 +521,7 @@ void HelloTriangleApplication::drawFrame() {
         throw std::runtime_error("Failed to acquire swap chain image!");
     }
 
-    _syncManager.waitForFrame(imageIndex);
+    _syncManager.waitForFrame(currentFrame);
     
 	_syncManager.markImageInFlight(imageIndex, currentFrame);
 	_syncManager.resetFrameFence(currentFrame);
@@ -654,94 +662,98 @@ void HelloTriangleApplication::recreateSwapChain() {
     createDescriptorPool();
     createDescriptorSets();
 	vkDestroyDescriptorPool(_vulkanContext.getDevice(), imguiDescriptorPool, nullptr);
-	vkDestroyDescriptorPool(_vulkanContext.getDevice(), _vulkanContext.getDescriptorPool(), nullptr);
+
+	cleanupImGui();
+	initImGui();
 }
 
 void HelloTriangleApplication::cleanupSwapChain() {
     
+    if (depthImageView != VK_NULL_HANDLE) {
+        vkDestroyImageView(_vulkanContext.getDevice(), depthImageView, nullptr);
+        depthImageView = VK_NULL_HANDLE;
+    }
+    if (depthImage != VK_NULL_HANDLE) {
+        vkDestroyImage(_vulkanContext.getDevice(), depthImage, nullptr);
+        depthImage = VK_NULL_HANDLE;
+    }
+    if (depthImageMemory != VK_NULL_HANDLE) {
+        vkFreeMemory(_vulkanContext.getDevice(), depthImageMemory, nullptr);
+        depthImageMemory = VK_NULL_HANDLE;
+    }
+
+    if (!commandBuffers.empty()) {
+        vkFreeCommandBuffers(
+            _vulkanContext.getDevice(),
+            _vulkanContext.getCommandPool(),
+            static_cast<uint32_t>(commandBuffers.size()),
+            commandBuffers.data());
+        commandBuffers.clear();
+    }
+
     _swapChainManager.cleanup();
 }
 
 void HelloTriangleApplication::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = 0; // or VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT if desired
+    beginInfo.pInheritanceInfo = nullptr;
+
     if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
         throw std::runtime_error("Failed to begin recording command buffer!");
     }
 
-    VkImageMemoryBarrier2 imageBarrierToAttachment{};
-    imageBarrierToAttachment.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-    imageBarrierToAttachment.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
-    imageBarrierToAttachment.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
-    imageBarrierToAttachment.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
-    imageBarrierToAttachment.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    imageBarrierToAttachment.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	imageBarrierToAttachment.image = _swapChainManager.getSwapChainImages()[imageIndex];
-    imageBarrierToAttachment.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+    VkClearValue clearValues[2]{};
+    clearValues[0].color = { { uiClearColour.x, uiClearColour.y, uiClearColour.z, uiClearColour.w } };
+    clearValues[1].depthStencil = { 1.0f, 0 };
 
-    VkDependencyInfo dependencyInfoToAttachment{};
-    dependencyInfoToAttachment.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-    dependencyInfoToAttachment.imageMemoryBarrierCount = 1;
-    dependencyInfoToAttachment.pImageMemoryBarriers = &imageBarrierToAttachment;
-    vkCmdPipelineBarrier2(commandBuffer, &dependencyInfoToAttachment);
+    VkRenderPassBeginInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass = _renderPassManager.getRenderPass();
+    renderPassInfo.framebuffer = _swapChainManager.getSwapChainFramebuffers()[imageIndex];
+    renderPassInfo.renderArea.offset = { 0, 0 };
+    renderPassInfo.renderArea.extent = _swapChainManager.getExtent();
+    renderPassInfo.clearValueCount = 2;
+    renderPassInfo.pClearValues = clearValues;
 
-    VkRenderingAttachmentInfo colorAttachment{};
-    colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-	colorAttachment.imageView = _swapChainManager.getSwapChainImageViews()[imageIndex];
-    colorAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    colorAttachment.clearValue.color = { {uiClearColour.x, uiClearColour.y, uiClearColour.z, uiClearColour.w} };
+    vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    VkRenderingInfo renderingInfo{};
-    renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
-    renderingInfo.renderArea = { {0, 0}, _swapChainManager.getExtent()};
-    renderingInfo.layerCount = 1;
-    renderingInfo.colorAttachmentCount = 1;
-    renderingInfo.pColorAttachments = &colorAttachment;
-
-    vkCmdBeginRendering(commandBuffer, &renderingInfo);
-
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineManager.getPipeline("Pipeline"));
-
+    // Set viewport/scissor (can be static or dynamic)
     VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
     viewport.width = static_cast<float>(_swapChainManager.getExtent().width);
     viewport.height = static_cast<float>(_swapChainManager.getExtent().height);
+    viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
     vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
-
     VkRect2D scissor{};
+    scissor.offset = { 0, 0 };
     scissor.extent = _swapChainManager.getExtent();
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
+    // Bind your pipeline and descriptors
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineManager.getPipeline("Pipeline"));
+    vkCmdBindDescriptorSets(
+        commandBuffer,
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        _pipelineManager.getPipelineLayout(),
+        0, 1, &descriptorSets[currentFrame],
+        0, nullptr);
 
     VkBuffer vertexBuffers[] = { vertexBuffer };
     VkDeviceSize offsets[] = { 0 };
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
     vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineManager.getPipelineLayout(), 0, 1, &descriptorSets[currentFrame], 0, nullptr);
-    vkCmdDrawIndexed(commandBuffer, static_cast<uint16_t>(indices.size()), 1, 0, 0, 0);
 
-	ImDrawData* drawData = ImGui::GetDrawData();
-	ImGui_ImplVulkan_RenderDrawData(drawData, commandBuffer, VK_NULL_HANDLE);
+    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
-    vkCmdEndRendering(commandBuffer);
+    // Render ImGui inside the same render pass
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer, VK_NULL_HANDLE);
 
-    VkImageMemoryBarrier2 imageBarrierToPresent{};
-    imageBarrierToPresent.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-    imageBarrierToPresent.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
-    imageBarrierToPresent.srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
-    imageBarrierToPresent.dstStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT;
-    imageBarrierToPresent.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    imageBarrierToPresent.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-	imageBarrierToPresent.image = _swapChainManager.getSwapChainImages()[imageIndex];
-    imageBarrierToPresent.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
-
-    VkDependencyInfo dependencyInfoToPresent{};
-    dependencyInfoToPresent.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-    dependencyInfoToPresent.imageMemoryBarrierCount = 1;
-    dependencyInfoToPresent.pImageMemoryBarriers = &imageBarrierToPresent;
-    vkCmdPipelineBarrier2(commandBuffer, &dependencyInfoToPresent);
+    vkCmdEndRenderPass(commandBuffer);
 
     if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
         throw std::runtime_error("Failed to record command buffer!");
