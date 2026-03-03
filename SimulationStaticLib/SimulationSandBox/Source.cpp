@@ -43,6 +43,7 @@
 #include "RenderPassManager.h"
 #include "SyncManager.h"
 #include "PipelineManager.h"
+#include "Scenario.h"
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
 
@@ -122,6 +123,11 @@ private:
 	bool simulationRunning = false;
 
 	bool framebufferResized = false;
+
+	float simulationTimeAcumulator = 0.0f;
+
+    //Scenario Management
+    Scenario _selectedScenario;
 
     //Depth Resources
 	VkImage depthImage = VK_NULL_HANDLE;
@@ -204,6 +210,9 @@ private:
         VkDebugUtilsMessageTypeFlagsEXT messageType,
         const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
         void* pUserData);
+
+    //Simulation control
+    void update(float seconds);
 };
 
 // --- Implementation ---
@@ -320,9 +329,45 @@ void HelloTriangleApplication::cleanupImGui() {
     }
 }
 
+void HelloTriangleApplication::update(float seconds)
+{
+    _selectedScenario.OnUpdate(seconds);
+}
+
 void HelloTriangleApplication::mainLoop() {
+    using clock = std::chrono::high_resolution_clock;
+    auto previousTime = clock::now();
+    
     while (!glfwWindowShouldClose(_windowManager.getWindow())) {
         glfwPollEvents();
+        auto currentTime = clock::now();
+        float frameSeconds =
+            std::chrono::duration<float>(currentTime - previousTime).count();
+        previousTime = currentTime;
+
+        // If timestep is <= 0, treat as "no simulation stepping"
+        float dt = simulationTimeStep > 0.0f ? simulationTimeStep : frameSeconds;
+
+        if (simulationRunning && simulationTimeStep > 0.0f) {
+            // Fixed timestep with accumulator
+            simulationTimeAcumulator += frameSeconds;
+
+            // Optionally clamp to avoid spiral of death after long pauses
+            const float maxAccumulatedTime = simulationTimeStep * 8.0f;
+            if (simulationTimeAcumulator > maxAccumulatedTime) {
+                simulationTimeAcumulator = maxAccumulatedTime;
+            }
+
+            // Run simulation multiple times between renders
+            while (simulationTimeAcumulator >= simulationTimeStep) {
+                update(simulationTimeStep);
+                simulationTimeAcumulator -= simulationTimeStep;
+            }
+        }
+        else if (simulationRunning && simulationTimeStep <= 0.0f) {
+            // Fallback: variable timestep update
+            update(dt);
+        }
         drawFrame();
     }
     vkDeviceWaitIdle(_vulkanContext.getDevice());
@@ -565,12 +610,10 @@ void HelloTriangleApplication::drawFrame() {
 			ImGui::SameLine();
 			if(ImGui::Button("Step Forward"))
             {
-
-            }
-			ImGui::SameLine();
-            if(ImGui::Button("Step Backward"))
-            {
-			
+                if(simulationTimeStep > 0.0f)
+                {
+                    update(simulationTimeStep);
+				}
             }
 			ImGui::InputFloat("timestep", &simulationTimeStep);
             ImGui::EndMenu();

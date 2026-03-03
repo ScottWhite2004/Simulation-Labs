@@ -12,7 +12,7 @@ void Scenario::OnLoad()
 {
 }
 
-void Scenario::OnUpdate()
+void Scenario::OnUpdate(float seconds)
 {
 }
 
