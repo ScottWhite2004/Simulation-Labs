@@ -267,6 +267,8 @@ void HelloTriangleApplication::initVulkan() {
     createDescriptorSets();
     createCommandBuffers();
     initImGui();
+
+	_selectedScenario.OnLoad();
 }
 
 void HelloTriangleApplication::initImGui() {

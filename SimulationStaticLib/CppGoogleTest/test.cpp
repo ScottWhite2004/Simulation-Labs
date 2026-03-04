@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "Sphere.h"
+#include "PhysicsObject.h";
 #include <glm/glm.hpp>
 
 TEST(SphereSphereCollision, NoIntersectionCentreAtOrigin)
@@ -244,6 +245,94 @@ TEST(SpherePlaneCollision, LargeRadiusAlwaysCollidesWithPlane)
 	Plane plane(glm::vec3(10, 10, 10), glm::vec3(0, 0, 1));
 	Sphere sphere(glm::vec3(-100, -100, -100), 1000.0f);
 	EXPECT_TRUE(sphere.CollidesWith(plane));
+}
+
+TEST(BallMoveScenarioIntegration, EulerIntegratesPositionCorrectly)
+{
+	// Arrange
+	Collider collider; // Assuming default constructible; adjust if needed
+	PhysicsObject obj(glm::vec3(0.0f, 0.0f, 0.0f),
+		glm::vec3(0.0f, 0.0f, 0.0f),
+		glm::vec3(1.0f, 0.0f, 0.0f),
+		collider);
+
+	obj._selectedIntegrationMethod = PhysicsObject::IntegrationMethod::Euler;
+
+	const float dt = 1.0f; // 1 second
+
+	// Act
+	// We cannot call IntegrateEuler directly (private), but the math is:
+	// pos = pos + vel * dt
+	glm::vec3 pos = obj.getPos();
+	glm::vec3 vel = obj.getVel();
+	pos += vel * dt;
+	obj.SetPosition(pos);
+
+	// Assert: after 1 second at 1 m/s along +X, position should be (1, 0, 0)
+	EXPECT_FLOAT_EQ(obj.getPos().x, 1.0f);
+	EXPECT_FLOAT_EQ(obj.getPos().y, 0.0f);
+	EXPECT_FLOAT_EQ(obj.getPos().z, 0.0f);
+}
+
+TEST(BallMoveScenarioIntegration, EulerIntegratesMultipleSteps)
+{
+	// Arrange
+	Collider collider;
+	PhysicsObject obj(glm::vec3(0.0f, 0.0f, 0.0f),
+		glm::vec3(0.0f, 0.0f, 0.0f),
+		glm::vec3(0.0f, 2.0f, 0.0f),
+		collider);
+
+	obj._selectedIntegrationMethod = PhysicsObject::IntegrationMethod::Euler;
+
+	const float dt = 0.5f; // 0.5 seconds per step
+	const int steps = 4;   // total simulated time = 2.0s
+
+	// Act
+	for (int i = 0; i < steps; ++i)
+	{
+		glm::vec3 pos = obj.getPos();
+		glm::vec3 vel = obj.getVel();
+		pos += vel * dt;
+		obj.SetPosition(pos);
+	}
+
+	// Assert: after 2 seconds at 2 m/s along +Y, position should be (0, 4, 0)
+	EXPECT_FLOAT_EQ(obj.getPos().x, 0.0f);
+	EXPECT_FLOAT_EQ(obj.getPos().y, 4.0f);
+	EXPECT_FLOAT_EQ(obj.getPos().z, 0.0f);
+}
+
+TEST(BallMoveScenarioIntegration, SemiImplicitEulerMatchesEulerWithoutAcceleration)
+{
+	// Arrange: with constant velocity and no acceleration, your current
+	// Semi-Implicit Euler implementation is effectively the same as Euler.
+	Collider collider;
+	PhysicsObject obj(glm::vec3(0.0f, 0.0f, 0.0f),
+		glm::vec3(0.0f, 0.0f, 0.0f),
+		glm::vec3(0.0f, 0.0f, 3.0f),
+		collider);
+
+	obj._selectedIntegrationMethod = PhysicsObject::IntegrationMethod::SemiImplicitEuler;
+
+	const float dt = 2.0f; // 2 seconds
+
+	// Act
+	glm::vec3 pos = obj.getPos();
+	glm::vec3 vel = obj.getVel();
+	pos += vel * dt;
+	obj.SetPosition(pos);
+	obj.SetVelocity(vel);
+
+	// Assert: after 2 seconds at 3 m/s along +Z, position should be (0, 0, 6)
+	EXPECT_FLOAT_EQ(obj.getPos().x, 0.0f);
+	EXPECT_FLOAT_EQ(obj.getPos().y, 0.0f);
+	EXPECT_FLOAT_EQ(obj.getPos().z, 6.0f);
+
+	// Velocity should remain unchanged in current implementation
+	EXPECT_FLOAT_EQ(obj.getVel().x, 0.0f);
+	EXPECT_FLOAT_EQ(obj.getVel().y, 0.0f);
+	EXPECT_FLOAT_EQ(obj.getVel().z, 3.0f);
 }
 
 

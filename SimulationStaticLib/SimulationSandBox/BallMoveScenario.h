@@ -6,6 +6,7 @@ class BallMoveScenario : public Scenario
 {
 
 	std::vector<PhysicsObject> _PhysicObjects;
+	const glm::vec3 _Gravity{ 0.0f, -9.81f, 0.0f };
 
 public:
 	BallMoveScenario();
@@ -19,6 +20,11 @@ public:
 
 	void ImGuiMain() override;
 
+
+private:
+	void IntegrateEuler(PhysicsObject& obj, float seconds);
+	void IntegrateSemiImplicitEuler(PhysicsObject& obj, float seconds);
+	void StepSimulation(float seconds);
 
 };
 
