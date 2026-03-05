@@ -20,5 +20,8 @@ public:
 		return false;
 	}
 
+	void SetPosition(const glm::vec3& newPosition) { _Position = newPosition; }
+	glm::vec3 GetPosition() const { return _Position; }
+
 };
 

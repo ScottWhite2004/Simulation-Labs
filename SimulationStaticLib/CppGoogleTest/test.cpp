@@ -1,7 +1,9 @@
 #include "pch.h"
 #include "Sphere.h"
-#include "PhysicsObject.h";
+#include "PhysicsObject.h"
 #include <glm/glm.hpp>
+
+
 
 TEST(SphereSphereCollision, NoIntersectionCentreAtOrigin)
 {
@@ -247,92 +249,318 @@ TEST(SpherePlaneCollision, LargeRadiusAlwaysCollidesWithPlane)
 	EXPECT_TRUE(sphere.CollidesWith(plane));
 }
 
-TEST(BallMoveScenarioIntegration, EulerIntegratesPositionCorrectly)
+// ------------------------------------------------------------
+// Helpers for PhysicsObject tests
+// ------------------------------------------------------------
+static PhysicsObject CreateSphereBody(const glm::vec3& position,
+	const glm::vec3& velocity,
+	float radius,
+	float mass = 1.0f)
 {
-	// Arrange
-	Collider collider; // Assuming default constructible; adjust if needed
-	PhysicsObject obj(glm::vec3(0.0f, 0.0f, 0.0f),
+	Sphere sphereCollider(position, radius);
+	PhysicsObject body(position, glm::vec3(0.0f), velocity, sphereCollider, mass);
+	return body;
+}
+
+// ------------------------------------------------------------
+// Sphere–sphere collision resolution tests (direct resolver)
+// ------------------------------------------------------------
+
+TEST(PhysicsResolution, HeadOnEqualMass_VelocitiesSwapAlongNormal)
+{
+	// Two equal?mass spheres on x?axis, moving toward each other
+	PhysicsObject a = CreateSphereBody(
+		glm::vec3(-1.0f, 0.0f, 0.0f),   // position
+		glm::vec3(1.0f, 0.0f, 0.0f),   // velocity
+		1.0f);                          // radius
+
+	PhysicsObject b = CreateSphereBody(
+		glm::vec3(1.0f, 0.0f, 0.0f),
+		glm::vec3(-1.0f, 0.0f, 0.0f),
+		1.0f);
+
+	// Ensure spheres overlap (so collision is valid)
+	ASSERT_TRUE(a.GetSphere().CollidesWith(b.GetSphere()));
+
+	// Act
+	a.ResolveSphereSphereCollision(b);
+
+	// For equal masses and elastic collision, velocities swap
+	EXPECT_EQ(a.getVel(), glm::vec3(-1.0f, 0.0f, 0.0f));
+	EXPECT_EQ(b.getVel(), glm::vec3(1.0f, 0.0f, 0.0f));
+}
+
+TEST(PhysicsResolution, OneMovingOneStationary_HeadOn)
+{
+	// Moving sphere A toward stationary B
+	PhysicsObject a = CreateSphereBody(
+		glm::vec3(-2.0f, 0.0f, 0.0f),
+		glm::vec3(2.0f, 0.0f, 0.0f),
+		1.5f);                          // radius
+
+	PhysicsObject b = CreateSphereBody(
+		glm::vec3(0.0f, 0.0f, 0.0f),
+		glm::vec3(0.0f, 0.0f, 0.0f),
+		1.5f);
+
+	ASSERT_TRUE(a.GetSphere().CollidesWith(b.GetSphere()));
+
+	// Act
+	a.ResolveSphereSphereCollision(b);
+
+	// After elastic equal?mass head?on collision:
+	// A stops, B takes A's original velocity
+	EXPECT_EQ(a.getVel(), glm::vec3(0.0f, 0.0f, 0.0f));
+	EXPECT_EQ(b.getVel(), glm::vec3(2.0f, 0.0f, 0.0f));
+}
+
+TEST(PhysicsResolution, GlancingCollision_NormalComponentSwapped_TangentPreserved)
+{
+	// Line of centers along +x, tangent along +y
+	// A moves down?right, B moves up?left
+	PhysicsObject a = CreateSphereBody(
+		glm::vec3(-1.0f, 0.0f, 0.0f),
+		glm::vec3(1.0f, -1.0f, 0.0f),
+		1.0f);
+
+	PhysicsObject b = CreateSphereBody(
+		glm::vec3(1.0f, 0.0f, 0.0f),
+		glm::vec3(-1.0f, 1.0f, 0.0f),
+		1.0f);
+
+	ASSERT_TRUE(a.GetSphere().CollidesWith(b.GetSphere()));
+
+	glm::vec3 n(1.0f, 0.0f, 0.0f); // collision normal (line of centers)
+
+	// Pre?collision velocities
+	glm::vec3 va0 = a.getVel();
+	glm::vec3 vb0 = b.getVel();
+
+	float vaN0 = glm::dot(va0, n);
+	float vbN0 = glm::dot(vb0, n);
+
+	glm::vec3 vaT0 = va0 - vaN0 * n;
+	glm::vec3 vbT0 = vb0 - vbN0 * n;
+
+	// Act
+	a.ResolveSphereSphereCollision(b);
+
+	glm::vec3 va1 = a.getVel();
+	glm::vec3 vb1 = b.getVel();
+
+	float vaN1 = glm::dot(va1, n);
+	float vbN1 = glm::dot(vb1, n);
+
+	glm::vec3 vaT1 = va1 - vaN1 * n;
+	glm::vec3 vbT1 = vb1 - vbN1 * n;
+
+	// Tangential components (perpendicular to normal) unchanged
+	EXPECT_EQ(vaT1, vaT0);
+	EXPECT_EQ(vbT1, vbT0);
+
+	// Normal components swapped for equal mass, elastic collision
+	EXPECT_FLOAT_EQ(vaN1, vbN0);
+	EXPECT_FLOAT_EQ(vbN1, vaN0);
+}
+
+TEST(PhysicsResolution, NoCollisionWhenSeparatingAlongNormal)
+{
+	// Spheres overlapping but moving away from each other along normal
+	PhysicsObject a = CreateSphereBody(
+		glm::vec3(-1.0f, 0.0f, 0.0f),
+		glm::vec3(-1.0f, 0.0f, 0.0f),   // moving left
+		1.5f);
+
+	PhysicsObject b = CreateSphereBody(
+		glm::vec3(1.0f, 0.0f, 0.0f),
+		glm::vec3(1.0f, 0.0f, 0.0f),   // moving right
+		1.5f);
+
+	ASSERT_TRUE(a.GetSphere().CollidesWith(b.GetSphere()));
+
+	glm::vec3 vaBefore = a.getVel();
+	glm::vec3 vbBefore = b.getVel();
+
+	// Relative normal speed > 0 ? resolver should early?out and do nothing
+	a.ResolveSphereSphereCollision(b);
+
+	EXPECT_EQ(a.getVel(), vaBefore);
+	EXPECT_EQ(b.getVel(), vbBefore);
+}
+
+TEST(PhysicsResolution, DegenerateCase_CoincidentCenters_PicksArbitraryNormal)
+{
+	// Centres coincide; velocities head?on along some axis
+	PhysicsObject a = CreateSphereBody(
 		glm::vec3(0.0f, 0.0f, 0.0f),
 		glm::vec3(1.0f, 0.0f, 0.0f),
-		collider);
+		1.0f);
 
-	obj._selectedIntegrationMethod = PhysicsObject::IntegrationMethod::Euler;
+	PhysicsObject b = CreateSphereBody(
+		glm::vec3(0.0f, 0.0f, 0.0f),    // same centre
+		glm::vec3(-1.0f, 0.0f, 0.0f),
+		1.0f);
 
-	const float dt = 1.0f; // 1 second
+	ASSERT_TRUE(a.GetSphere().CollidesWith(b.GetSphere()));
 
 	// Act
-	// We cannot call IntegrateEuler directly (private), but the math is:
-	// pos = pos + vel * dt
-	glm::vec3 pos = obj.getPos();
-	glm::vec3 vel = obj.getVel();
-	pos += vel * dt;
-	obj.SetPosition(pos);
+	a.ResolveSphereSphereCollision(b);
 
-	// Assert: after 1 second at 1 m/s along +X, position should be (1, 0, 0)
-	EXPECT_FLOAT_EQ(obj.getPos().x, 1.0f);
-	EXPECT_FLOAT_EQ(obj.getPos().y, 0.0f);
-	EXPECT_FLOAT_EQ(obj.getPos().z, 0.0f);
+	// Even with coincident centres, velocities should still swap along
+	// the arbitrary normal chosen in the implementation (1,0,0)
+	EXPECT_EQ(a.getVel(), glm::vec3(-1.0f, 0.0f, 0.0f));
+	EXPECT_EQ(b.getVel(), glm::vec3(1.0f, 0.0f, 0.0f));
 }
 
-TEST(BallMoveScenarioIntegration, EulerIntegratesMultipleSteps)
+// ------------------------------------------------------------
+// Sphere–sphere collision resolution tests (different masses)
+// ------------------------------------------------------------
+
+static void Compute1DElasticCollision(
+	float m1, float m2,
+	float u1, float u2,
+	float& v1, float& v2)
 {
-	// Arrange
-	Collider collider;
-	PhysicsObject obj(glm::vec3(0.0f, 0.0f, 0.0f),
-		glm::vec3(0.0f, 0.0f, 0.0f),
-		glm::vec3(0.0f, 2.0f, 0.0f),
-		collider);
-
-	obj._selectedIntegrationMethod = PhysicsObject::IntegrationMethod::Euler;
-
-	const float dt = 0.5f; // 0.5 seconds per step
-	const int steps = 4;   // total simulated time = 2.0s
-
-	// Act
-	for (int i = 0; i < steps; ++i)
-	{
-		glm::vec3 pos = obj.getPos();
-		glm::vec3 vel = obj.getVel();
-		pos += vel * dt;
-		obj.SetPosition(pos);
-	}
-
-	// Assert: after 2 seconds at 2 m/s along +Y, position should be (0, 4, 0)
-	EXPECT_FLOAT_EQ(obj.getPos().x, 0.0f);
-	EXPECT_FLOAT_EQ(obj.getPos().y, 4.0f);
-	EXPECT_FLOAT_EQ(obj.getPos().z, 0.0f);
+	// v1 = (m1 - m2)/(m1 + m2) * u1 + (2 m2)/(m1 + m2) * u2
+	// v2 = (2 m1)/(m1 + m2) * u1 + (m2 - m1)/(m1 + m2) * u2
+	const float denom = m1 + m2;
+	v1 = ((m1 - m2) / denom) * u1 + (2.0f * m2 / denom) * u2;
+	v2 = (2.0f * m1 / denom) * u1 + ((m2 - m1) / denom) * u2;
 }
 
-TEST(BallMoveScenarioIntegration, SemiImplicitEulerMatchesEulerWithoutAcceleration)
+TEST(PhysicsResolution_DifferentMass, HeadOn_HeavyHitsLight)
 {
-	// Arrange: with constant velocity and no acceleration, your current
-	// Semi-Implicit Euler implementation is effectively the same as Euler.
-	Collider collider;
-	PhysicsObject obj(glm::vec3(0.0f, 0.0f, 0.0f),
-		glm::vec3(0.0f, 0.0f, 0.0f),
-		glm::vec3(0.0f, 0.0f, 3.0f),
-		collider);
+	// Heavy sphere A (m = 2) moving right, light sphere B (m = 1) moving left.
+	const float m1 = 2.0f;
+	const float m2 = 1.0f;
+	const float u1 = 1.0f;   // A along +x
+	const float u2 = -1.0f;  // B along -x
 
-	obj._selectedIntegrationMethod = PhysicsObject::IntegrationMethod::SemiImplicitEuler;
+	PhysicsObject a = CreateSphereBody(
+		glm::vec3(-1.0f, 0.0f, 0.0f),
+		glm::vec3(u1, 0.0f, 0.0f),
+		1.0f,
+		m1);
 
-	const float dt = 2.0f; // 2 seconds
+	PhysicsObject b = CreateSphereBody(
+		glm::vec3(1.0f, 0.0f, 0.0f),
+		glm::vec3(u2, 0.0f, 0.0f),
+		1.0f,
+		m2);
+
+	ASSERT_TRUE(a.GetSphere().CollidesWith(b.GetSphere()));
+
+	float v1Expected = 0.0f;
+	float v2Expected = 0.0f;
+	Compute1DElasticCollision(m1, m2, u1, u2, v1Expected, v2Expected);
 
 	// Act
-	glm::vec3 pos = obj.getPos();
-	glm::vec3 vel = obj.getVel();
-	pos += vel * dt;
-	obj.SetPosition(pos);
-	obj.SetVelocity(vel);
+	a.ResolveSphereSphereCollision(b);
 
-	// Assert: after 2 seconds at 3 m/s along +Z, position should be (0, 0, 6)
-	EXPECT_FLOAT_EQ(obj.getPos().x, 0.0f);
-	EXPECT_FLOAT_EQ(obj.getPos().y, 0.0f);
-	EXPECT_FLOAT_EQ(obj.getPos().z, 6.0f);
+	EXPECT_FLOAT_EQ(a.getVel().x, v1Expected);
+	EXPECT_FLOAT_EQ(b.getVel().x, v2Expected);
+	EXPECT_FLOAT_EQ(a.getVel().y, 0.0f);
+	EXPECT_FLOAT_EQ(b.getVel().y, 0.0f);
+	EXPECT_FLOAT_EQ(a.getVel().z, 0.0f);
+	EXPECT_FLOAT_EQ(b.getVel().z, 0.0f);
+}
 
-	// Velocity should remain unchanged in current implementation
-	EXPECT_FLOAT_EQ(obj.getVel().x, 0.0f);
-	EXPECT_FLOAT_EQ(obj.getVel().y, 0.0f);
-	EXPECT_FLOAT_EQ(obj.getVel().z, 3.0f);
+TEST(PhysicsResolution_DifferentMass, HeadOn_LightHitsHeavy_StationaryHeavy)
+{
+	// Light sphere A (m = 1) moving toward heavy stationary B (m = 3)
+	const float m1 = 1.0f;
+	const float m2 = 3.0f;
+	const float u1 = 2.0f;   // A along +x
+	const float u2 = 0.0f;   // B at rest
+
+	PhysicsObject a = CreateSphereBody(
+		glm::vec3(-2.0f, 0.0f, 0.0f),
+		glm::vec3(u1, 0.0f, 0.0f),
+		1.0f,
+		m1);
+
+	PhysicsObject b = CreateSphereBody(
+		glm::vec3(0.0f, 0.0f, 0.0f),
+		glm::vec3(u2, 0.0f, 0.0f),
+		1.0f,
+		m2);
+
+	ASSERT_TRUE(a.GetSphere().CollidesWith(b.GetSphere()));
+
+	float v1Expected = 0.0f;
+	float v2Expected = 0.0f;
+	Compute1DElasticCollision(m1, m2, u1, u2, v1Expected, v2Expected);
+
+	// Act
+	a.ResolveSphereSphereCollision(b);
+
+	EXPECT_FLOAT_EQ(a.getVel().x, v1Expected);  // expected -1.0
+	EXPECT_FLOAT_EQ(b.getVel().x, v2Expected);  // expected  1.0
+	EXPECT_FLOAT_EQ(a.getVel().y, 0.0f);
+	EXPECT_FLOAT_EQ(b.getVel().y, 0.0f);
+	EXPECT_FLOAT_EQ(a.getVel().z, 0.0f);
+	EXPECT_FLOAT_EQ(b.getVel().z, 0.0f);
+}
+
+TEST(PhysicsResolution_DifferentMass, GlancingCollision_NormalUsesMass_TangentPreserved)
+{
+	// Different masses, with tangential components.
+	// Normal is x?axis, tangential part is in y.
+	const float m1 = 1.0f;  // light
+	const float m2 = 3.0f;  // heavy
+
+	glm::vec3 n(1.0f, 0.0f, 0.0f);
+
+	PhysicsObject a = CreateSphereBody(
+		glm::vec3(-1.0f, 0.0f, 0.0f),
+		glm::vec3(1.0f, -1.0f, 0.0f),  // u1n = 1, tangent = (-1,0)
+		1.0f,
+		m1);
+
+	PhysicsObject b = CreateSphereBody(
+		glm::vec3(1.0f, 0.0f, 0.0f),
+		glm::vec3(-0.5f, 0.5f, 0.0f),  // u2n = -0.5, tangent = (0.5,0)
+		1.0f,
+		m2);
+
+	ASSERT_TRUE(a.GetSphere().CollidesWith(b.GetSphere()));
+
+	glm::vec3 va0 = a.getVel();
+	glm::vec3 vb0 = b.getVel();
+
+	const float u1n = glm::dot(va0, n);
+	const float u2n = glm::dot(vb0, n);
+
+	const glm::vec3 vaT0 = va0 - u1n * n;
+	const glm::vec3 vbT0 = vb0 - u2n * n;
+
+	float v1nExpected = 0.0f;
+	float v2nExpected = 0.0f;
+	Compute1DElasticCollision(m1, m2, u1n, u2n, v1nExpected, v2nExpected);
+
+	// Act
+	a.ResolveSphereSphereCollision(b);
+
+	glm::vec3 va1 = a.getVel();
+	glm::vec3 vb1 = b.getVel();
+
+	const float v1n = glm::dot(va1, n);
+	const float v2n = glm::dot(vb1, n);
+	const glm::vec3 vaT1 = va1 - v1n * n;
+	const glm::vec3 vbT1 = vb1 - v2n * n;
+
+	// Tangential components must remain unchanged
+	EXPECT_FLOAT_EQ(vaT1.x, vaT0.x);
+	EXPECT_FLOAT_EQ(vaT1.y, vaT0.y);
+	EXPECT_FLOAT_EQ(vaT1.z, vaT0.z);
+
+	EXPECT_FLOAT_EQ(vbT1.x, vbT0.x);
+	EXPECT_FLOAT_EQ(vbT1.y, vbT0.y);
+	EXPECT_FLOAT_EQ(vbT1.z, vbT0.z);
+
+	// Normal components must match the different?mass formula
+	EXPECT_FLOAT_EQ(v1n, v1nExpected);
+	EXPECT_FLOAT_EQ(v2n, v2nExpected);
 }
 
 

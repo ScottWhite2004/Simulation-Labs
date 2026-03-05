@@ -1,11 +1,13 @@
 #pragma once
 #include "Scenario.h"
 #include "PhysicsObject.h"
+#include "Plane.h"
 #include <vector>
 class BallMoveScenario : public Scenario
 {
 
 	std::vector<PhysicsObject> _PhysicObjects;
+	std::vector<Plane> _Planes;
 	const glm::vec3 _Gravity{ 0.0f, -9.81f, 0.0f };
 
 public:
@@ -20,11 +22,8 @@ public:
 
 	void ImGuiMain() override;
 
-
-private:
-	void IntegrateEuler(PhysicsObject& obj, float seconds);
-	void IntegrateSemiImplicitEuler(PhysicsObject& obj, float seconds);
-	void StepSimulation(float seconds);
+	void addPhysicsObject(const PhysicsObject& obj) { _PhysicObjects.push_back(obj); }
+	void AddPlane(const Plane& plane) { _Planes.push_back(plane); }
 
 };
 

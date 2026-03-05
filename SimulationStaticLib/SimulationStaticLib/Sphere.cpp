@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "Sphere.h"
 
+
 bool Sphere::IsInside(const glm::vec3& point) const
 {
 	glm::vec3 diff = point - _Position;
