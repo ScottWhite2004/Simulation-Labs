@@ -12,7 +12,7 @@ public:
 	
 	void changeScenario(const Scenario& newScenario);
 
-	void update();
+	void update(float seconds);
 
 	void draw();
 

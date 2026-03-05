@@ -19,8 +19,8 @@ void Application::changeScenario(const Scenario& newScenario)
 	currentScenario->OnLoad();
 }
 
-void Application::update()
+void Application::update(float seconds)
 {
 	if (currentScenario)
-		currentScenario->OnUpdate();
+		currentScenario->OnUpdate(seconds);
 }

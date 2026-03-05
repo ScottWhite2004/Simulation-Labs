@@ -10,13 +10,13 @@ void PhysicsObject::IntegrateEuler(float seconds)
 	glm::vec3 acceleration = _gravity * _inverseMass; // Assuming only gravity for this scenario
 	_position += _velocity * seconds;
 	_velocity += acceleration * seconds;
-	_sphere.SetPosition(_position);
+	_sphereCollider.SetPosition(_position);
 }
 
 void PhysicsObject::IntegrateEuler(float seconds, PhysicsObject& otherBody)
 {
 	IntegrateEuler(seconds);
-	if (_sphere.CollidesWith(otherBody.GetSphere()))
+	if (_sphereCollider.CollidesWith(otherBody.GetSphere()))
 	{
 		ResolveSphereSphereCollision(otherBody);
 	}
@@ -25,7 +25,7 @@ void PhysicsObject::IntegrateEuler(float seconds, PhysicsObject& otherBody)
 void PhysicsObject::IntegrateEuler(float seconds, const Plane& staticPlane)
 {
 	IntegrateEuler(seconds);
-	if(_sphere.CollidesWith(staticPlane))
+	if(_sphereCollider.CollidesWith(staticPlane))
 	{
 		_velocity = glm::vec3(0.0f); // Simple collision response: zero velocity
 	}
@@ -36,13 +36,13 @@ void PhysicsObject::IntegrateSemiImplicitEuler(float seconds)
 	glm::vec3 acceleration = _gravity * _inverseMass; // Assuming only gravity for this scenario
 	_velocity += acceleration * seconds;
 	_position += _velocity * seconds;
-	_sphere.SetPosition(_position);
+	_sphereCollider.SetPosition(_position);
 }
 
 void PhysicsObject::IntegrateSemiImplicitEuler(float seconds, PhysicsObject& otherBody)
 {
 	IntegrateSemiImplicitEuler(seconds);
-	if (_sphere.CollidesWith(otherBody.GetSphere()))
+	if (_sphereCollider.CollidesWith(otherBody.GetSphere()))
 	{
 		ResolveSphereSphereCollision(otherBody);
 	}
@@ -51,7 +51,7 @@ void PhysicsObject::IntegrateSemiImplicitEuler(float seconds, PhysicsObject& oth
 void PhysicsObject::IntegrateSemiImplicitEuler(float seconds, const Plane& staticPlane)
 {
 	IntegrateSemiImplicitEuler(seconds);
-	if(_sphere.CollidesWith(staticPlane))
+	if(_sphereCollider.CollidesWith(staticPlane))
 	{
 		_velocity = glm::vec3(0.0f); // Simple collision response: zero velocity
 	}

@@ -4,7 +4,7 @@ class Scenario
 {
 
 public:
-	Scenario();
+	Scenario() = default;
 	virtual ~Scenario();
 
 	virtual void OnLoad();

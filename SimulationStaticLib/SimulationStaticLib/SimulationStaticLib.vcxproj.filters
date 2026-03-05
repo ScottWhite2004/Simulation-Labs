@@ -21,7 +21,7 @@
     <ClInclude Include="pch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Sphere.h">
+    <ClInclude Include="SphereCollider.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Collider.h">
@@ -44,7 +44,7 @@
     <ClCompile Include="pch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Sphere.cpp">
+    <ClCompile Include="SphereCollider.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Collider.cpp">

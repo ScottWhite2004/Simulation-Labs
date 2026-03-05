@@ -4,13 +4,13 @@
 #include "Line.h"
 #include "glm/glm.hpp"
 
-	class Sphere : public Collider
+	class SphereCollider : public Collider
 	{
 
 		float _Radius;
 	public:
 
-		Sphere(const glm::vec3& position, float radius)
+		SphereCollider(const glm::vec3& position, float radius)
 			: _Radius(radius)
 		{
 			_Position = position;
@@ -21,7 +21,7 @@
 
 		virtual bool Intersects(const Line& line) const override;
 
-		bool CollidesWith(const Sphere& other) const;
+		bool CollidesWith(const SphereCollider& other) const;
 
 		bool CollidesWith(const Plane& other) const;
 

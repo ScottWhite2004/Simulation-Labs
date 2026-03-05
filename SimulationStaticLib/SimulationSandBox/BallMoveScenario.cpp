@@ -10,7 +10,7 @@ BallMoveScenario::~BallMoveScenario()
 
 void BallMoveScenario::OnLoad()
 {
-	Sphere sphere(glm::vec3(0.0f, 0.0f, 0.0f), 1.0f);
+	SphereCollider sphere(glm::vec3(0.0f, 0.0f, 0.0f), 1.0f);
 
     PhysicsObject moving(
         glm::vec3(-10.0f, 0.0f, 0.0f),
@@ -43,8 +43,8 @@ void BallMoveScenario::OnUpdate(float seconds)
     {
         for (size_t j = i + 1; j < _PhysicObjects.size(); ++j)
         {
-            Sphere& a = _PhysicObjects[i].GetSphere();
-            Sphere& b = _PhysicObjects[j].GetSphere();
+            SphereCollider& a = _PhysicObjects[i].GetSphere();
+            SphereCollider& b = _PhysicObjects[j].GetSphere();
 
             if (a.CollidesWith(b))
             {
@@ -57,7 +57,7 @@ void BallMoveScenario::OnUpdate(float seconds)
     // 3. Sphere–plane collisions
     for (auto& obj : _PhysicObjects)
     {
-        Sphere& s = obj.GetSphere();
+        SphereCollider& s = obj.GetSphere();
 
         for (const auto& plane : _Planes)
         {
