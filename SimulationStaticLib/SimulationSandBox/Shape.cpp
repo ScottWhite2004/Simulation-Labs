@@ -72,6 +72,7 @@ namespace
 	}
 }
 
+Shape::Shape() = default;
 
 Shape::~Shape() = default;
 
