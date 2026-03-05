@@ -59,57 +59,28 @@ void PhysicsObject::IntegrateSemiImplicitEuler(float seconds, const Plane& stati
 
 void PhysicsObject::ResolveSphereSphereCollision(PhysicsObject& other)
 {
-	// Compute collision normal from this to other
-	glm::vec3 normal = other.getPos() - _position;
-	float distance = glm::length(normal);
+	float distance = glm::length(other.getPos() - _position);
+	glm::vec3 normal = glm::normalize(other.getPos() - _position);
 	if (distance == 0.0f)
 	{
-		// Degenerate: centres coincide, pick an arbitrary normal
-		normal = glm::vec3(1.0f, 0.0f, 0.0f);
+		normal = glm::vec3(1.0f, 0.0f, 0.0f); // Arbitrary normal if spheres are at the same position
 	}
-	else
-	{
-		normal /= distance;
-	}
+	glm::vec3 relativeVelocity = _velocity - other.getVel();
+	float velAlongNormal = glm::dot(relativeVelocity, normal);
 
-	// Relative velocity along normal
-	const glm::vec3 v1 = _velocity;
-	const glm::vec3 v2 = other.getVel();
-
-	glm::vec3 relativeVelocity = v1 - v2;
-	float relNormalSpeed = glm::dot(relativeVelocity, normal);
-
-	// If spheres are separating or stationary along normal, do nothing
-	if (relNormalSpeed <= 0.0f)
-	{
+	if (velAlongNormal <= 0.0f)
 		return;
-	}
 
-	// Project velocities onto normal
-	float u1n = glm::dot(v1, normal);
-	float u2n = glm::dot(v2, normal);
+	float e = 1.0f; // coefficient of restitution
 
-	// Tangential components (perpendicular to normal)
-	glm::vec3 v1t = v1 - u1n * normal;
-	glm::vec3 v2t = v2 - u2n * normal;
-
-	// Masses
 	float m1 = _mass;
 	float m2 = other.getMass();
-	float denom = m1 + m2;
-	if (denom == 0.0f)
-	{
-		// Avoid divide by zero: just bail out
-		return;
-	}
 
-	// 1D perfectly elastic collision along the normal:
-	// v1 = ((m1 - m2)/(m1 + m2)) * u1 + (2 m2/(m1 + m2)) * u2
-	// v2 = (2 m1/(m1 + m2)) * u1 + ((m2 - m1)/(m1 + m2)) * u2
-	float v1n = ((m1 - m2) / denom) * u1n + (2.0f * m2 / denom) * u2n;
-	float v2n = (2.0f * m1 / denom) * u1n + ((m2 - m1) / denom) * u2n;
+	float j = -(1.0f + e) * velAlongNormal;
+	j /= (1.0f / m1 + 1.0f / m2);
 
-	// Reconstruct full 3D velocities: tangential + new normal component
-	_velocity = v1t + v1n * normal;
-	other.SetVelocity(v2t + v2n * normal);
+	glm::vec3 impulse = j * normal;
+
+	_velocity += impulse / m1;
+	other.SetVelocity(other.getVel() - impulse / m2);
 }
