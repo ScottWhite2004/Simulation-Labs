@@ -110,7 +110,7 @@ private:
     SyncManager _syncManager;
     PipelineManager _pipelineManager;
 	CameraManager _cameraManager;
-    //textureManager _texManager;
+    textureManager _texManager;
 	Image _imageHelper;
 
     uint32_t currentFrame = 0;
@@ -260,19 +260,20 @@ void HelloTriangleApplication::initVulkan() {
     _pipelineManager.createPipelineLayout(setLayouts);
     
 	_imageHelper = Image(_vulkanContext.getDevice(), _vulkanContext.getPhysicalDevice(), _vulkanContext.getCommandPool(), _vulkanContext.getGraphicsQueue());
-	//_texManager.initialize(_vulkanContext.getDevice(), _vulkanContext.getPhysicalDevice(), _vulkanContext.getCommandPool(), _vulkanContext.getGraphicsQueue());
- //   _texManager.addTexture("default", "textures/Default");
+
     
 
     createGraphicsPipeline();
 	_vulkanContext.createCommandPool();
+    _texManager.initialize(_vulkanContext.getDevice(), _vulkanContext.getPhysicalDevice(), _vulkanContext.getCommandPool(), _vulkanContext.getGraphicsQueue());
+    _texManager.addTexture("default", "textures/Default.png");
 	createDepthResources();
 	_swapChainManager.createFramebuffers(_renderPassManager.getRenderPass(),depthImageView);
 	_syncManager.initialize(&_vulkanContext, &_swapChainManager, MAX_FRAMES_IN_FLIGHT);
-	//Material defaultMaterial = Material(glm::vec4(1.0f), 0.0f, 1.0f, _texManager.getTexture("default"));
-	//_sphere = Sphere(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f), glm::vec3(0.0f), SphereCollider(glm::vec3(0.0f,0.0f,0.0f),1.0f), 1.0f, defaultMaterial, 1.0f);
-	//_sphere.create();
-	//_sphere.upload(_vulkanContext, MAX_FRAMES_IN_FLIGHT, _texManager.getTexture("default")->getTextureImageView(), _texManager.getTexture("default")->getTextureSampler(), {});
+	Material defaultMaterial = Material(glm::vec4(1.0f), 0.0f, 1.0f, _texManager.getTexture("default"));
+	_sphere = Sphere(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f), glm::vec3(0.0f), SphereCollider(glm::vec3(0.0f,0.0f,0.0f),1.0f), 1.0f, defaultMaterial, 1.0f);
+	_sphere.create();
+	_sphere.upload(_vulkanContext, MAX_FRAMES_IN_FLIGHT, _texManager.getTexture("default")->getTextureImageView(), _texManager.getTexture("default")->getTextureSampler(), {});
     createVertexBuffer();
     createIndexBuffer();
     createUniformBuffers();
@@ -807,7 +808,7 @@ void HelloTriangleApplication::recordCommandBuffer(VkCommandBuffer commandBuffer
     vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
 
     vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
-	//_sphere.draw(commandBuffer, _pipelineManager.getPipeline("Pipeline"), _pipelineManager.getPipelineLayout(), currentFrame);
+	_sphere.draw(commandBuffer, _pipelineManager.getPipeline("Pipeline"), _pipelineManager.getPipelineLayout(), currentFrame);
 
     // Render ImGui inside the same render pass
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer, VK_NULL_HANDLE);

@@ -26,7 +26,7 @@ class Shape : public PhysicsObject
 
 public:
 	Shape(const glm::vec3& position, const glm::vec3& rotation, const glm::vec3& velocity, const SphereCollider& sphereCollider, float mass,  const Material& material) : PhysicsObject(position,rotation,velocity,sphereCollider,mass), _material(material) {};
-	Shape() = default;
+	Shape();
 	~Shape();
 
 	Shape(const Shape&);

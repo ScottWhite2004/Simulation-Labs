@@ -34,7 +34,7 @@ private:
 
 public:
 	PhysicsObject(const glm::vec3& position, const glm::vec3& rotation, const glm::vec3& velocity, const SphereCollider& sphere, float mass = 1.0f) : _position(position), _rotation(rotation), _velocity(velocity), _sphereCollider(sphere), _mass(mass) { _inverseMass = (mass > 0.0f) ? 1.0f / _mass : 0.0f; }
-	PhysicsObject() = default;
+	PhysicsObject();
 	virtual ~PhysicsObject();
 	glm::vec3 getPos() const { return _position; }
 	glm::vec3 getRot() const { return _rotation; }

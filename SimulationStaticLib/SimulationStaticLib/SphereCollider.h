@@ -16,6 +16,8 @@
 			_Position = position;
 		}
 
+		SphereCollider();
+
 		virtual bool IsInside(const glm::vec3& point) const override;
 
 

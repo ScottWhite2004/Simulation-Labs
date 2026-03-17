@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "SphereCollider.h"
 
+SphereCollider::SphereCollider() = default;
 
 bool SphereCollider::IsInside(const glm::vec3& point) const
 {

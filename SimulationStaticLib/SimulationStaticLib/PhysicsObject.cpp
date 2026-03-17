@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "PhysicsObject.h"
 
+PhysicsObject::PhysicsObject() = default;
+
 PhysicsObject::~PhysicsObject()
 {
 }
