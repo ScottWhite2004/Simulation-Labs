@@ -144,6 +144,9 @@ private:
     std::vector<VkBuffer> uniformBuffers;
     std::vector<VkDeviceMemory> uniformBuffersMemory;
     std::vector<void*> uniformBuffersMapped;
+    std::vector<VkBuffer> lightingUniformBuffers;
+    std::vector<VkDeviceMemory> lightingUniformBuffersMemory;
+    std::vector<void*> lightingUniformBuffersMapped;
 
     // --- Descriptors ---
     VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
@@ -157,6 +160,9 @@ private:
 
     //Shapes
 	Sphere _sphere;
+
+
+
 
     // --- Main Flow ---
     void initWindow();
@@ -179,6 +185,8 @@ private:
 
 	//Depth resources
 	void createDepthResources();
+
+	Camera mainCamera;
 
 
     // --- Drawing and Swapchain Handling ---
@@ -237,6 +245,24 @@ void HelloTriangleApplication::initVulkan() {
 	_swapChainManager.createSwapChain();
     _swapChainManager.createImageViews();
 
+    // --- Addition: Create and pass the camera ---
+    VkExtent2D extent = _swapChainManager.getExtent();
+    float aspectRatio = static_cast<float>(extent.width) / static_cast<float>(extent.height);
+
+    mainCamera = Camera(
+        glm::vec3(0.0f, 0.0f, 5.0f), // eye (position)
+        glm::vec3(0.0f, 0.0f, 0.0f), // center (look at)
+        glm::vec3(0.0f, 1.0f, 0.0f), // up
+        glm::radians(45.0f),         // fovy
+        aspectRatio,                 // aspect ratio
+        0.1f,                        // near plane
+        100.0f                       // far plane
+    );
+
+    _cameraManager.addCamera(mainCamera);
+    _cameraManager.switchToCamera(0); // Make the first camera active
+    // ---------------------------------------------
+
 	_renderPassManager.initialize(&_vulkanContext, &_swapChainManager);
 	_renderPassManager.createRenderPass();
 	_pipelineManager.initialize(&_vulkanContext, &_renderPassManager, &_swapChainManager);
@@ -245,13 +271,28 @@ void HelloTriangleApplication::initVulkan() {
     uboBinding.binding = 0;
     uboBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     uboBinding.descriptorCount = 1;
-    uboBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT; // or both vertex/fragment if needed
-    uboBinding.pImmutableSamplers = nullptr;
+    uboBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+    VkDescriptorSetLayoutBinding samplerLayoutBinding{};
+    samplerLayoutBinding.binding = 1;
+    samplerLayoutBinding.descriptorCount = 1;
+    samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    samplerLayoutBinding.pImmutableSamplers = nullptr;
+    samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    VkDescriptorSetLayoutBinding lightingBinding{};
+    lightingBinding.binding = 2;
+    lightingBinding.descriptorCount = 1;
+    lightingBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    lightingBinding.pImmutableSamplers = nullptr;
+    lightingBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT; // or BOTH depending on your shader
+
+    std::array<VkDescriptorSetLayoutBinding, 3> bindings = { uboBinding, samplerLayoutBinding, lightingBinding };
 
     VkDescriptorSetLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = 1;
-    layoutInfo.pBindings = &uboBinding;
+    layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+    layoutInfo.pBindings = bindings.data();
 
 	_vulkanContext.createDescriptorSetLayout(layoutInfo);
 
@@ -273,11 +314,19 @@ void HelloTriangleApplication::initVulkan() {
 	Material defaultMaterial = Material(glm::vec4(1.0f), 0.0f, 1.0f, _texManager.getTexture("default"));
 	_sphere = Sphere(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f), glm::vec3(0.0f), SphereCollider(glm::vec3(0.0f,0.0f,0.0f),1.0f), 1.0f, defaultMaterial, 1.0f);
 	_sphere.create();
-	_sphere.upload(_vulkanContext, MAX_FRAMES_IN_FLIGHT, _texManager.getTexture("default")->getTextureImageView(), _texManager.getTexture("default")->getTextureSampler(), {});
     createVertexBuffer();
     createIndexBuffer();
     createUniformBuffers();
     createDescriptorPool();
+
+    std::vector<VkDescriptorBufferInfo> lightingBufferInfos(MAX_FRAMES_IN_FLIGHT);
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        lightingBufferInfos[i].buffer = lightingUniformBuffers[i];
+        lightingBufferInfos[i].offset = 0;
+        lightingBufferInfos[i].range = sizeof(LightingUBO);
+    }
+
+    _sphere.upload(_vulkanContext, MAX_FRAMES_IN_FLIGHT, _texManager.getTexture("default")->getTextureImageView(), _texManager.getTexture("default")->getTextureSampler(), lightingBufferInfos);
     createDescriptorSets();
     createCommandBuffers();
     initImGui();
@@ -407,6 +456,9 @@ void HelloTriangleApplication::cleanup() {
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         vkDestroyBuffer(_vulkanContext.getDevice(), uniformBuffers[i], nullptr);
         vkFreeMemory(_vulkanContext.getDevice(), uniformBuffersMemory[i], nullptr);
+
+        vkDestroyBuffer(_vulkanContext.getDevice(), lightingUniformBuffers[i], nullptr);
+        vkFreeMemory(_vulkanContext.getDevice(), lightingUniformBuffersMemory[i], nullptr);
     }
     
     vkDestroyDescriptorPool(_vulkanContext.getDevice(), _vulkanContext.getDescriptorPool(), nullptr);
@@ -500,28 +552,46 @@ void HelloTriangleApplication::createIndexBuffer() {
 
 void HelloTriangleApplication::createUniformBuffers() {
     VkDeviceSize bufferSize = sizeof(UniformBufferObject);
+    VkDeviceSize lightBufferSize = sizeof(LightingUBO);
+
     uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
     uniformBuffersMemory.resize(MAX_FRAMES_IN_FLIGHT);
     uniformBuffersMapped.resize(MAX_FRAMES_IN_FLIGHT);
 
+    lightingUniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+    lightingUniformBuffersMemory.resize(MAX_FRAMES_IN_FLIGHT);
+    lightingUniformBuffersMapped.resize(MAX_FRAMES_IN_FLIGHT);
+
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        // Transform uniform buffer
         createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffers[i], uniformBuffersMemory[i]);
         vkMapMemory(_vulkanContext.getDevice(), uniformBuffersMemory[i], 0, bufferSize, 0, &uniformBuffersMapped[i]);
+
+        // Lighting uniform buffer
+        createBuffer(lightBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, lightingUniformBuffers[i], lightingUniformBuffersMemory[i]);
+        vkMapMemory(_vulkanContext.getDevice(), lightingUniformBuffersMemory[i], 0, lightBufferSize, 0, &lightingUniformBuffersMapped[i]);
     }
 }
 
 void HelloTriangleApplication::createDescriptorPool() {
-    VkDescriptorPoolSize poolSize{};
-    poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    poolSize.descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+    std::array<VkDescriptorPoolSize, 2> poolSizes{};
+
+    // We need enough Uniform Buffers and Samplers for our scene objects
+    // Bumping limits to comfortably support the triangle and the sphere
+    poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT * 10);
+
+    poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT * 10);
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.poolSizeCount = 1;
-    poolInfo.pPoolSizes = &poolSize;
-    poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+    poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+    poolInfo.pPoolSizes = poolSizes.data();
 
-	_vulkanContext.createDescriptorPool(poolInfo);
+    // Give the pool plenty of available sets
+    poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT * 10);
+    _vulkanContext.createDescriptorPool(poolInfo);
 }
 
 void HelloTriangleApplication::createDescriptorSets() {
@@ -707,15 +777,17 @@ void HelloTriangleApplication::recreateSwapChain() {
     _syncManager.createPerImageSemaphores();
     createCommandBuffers();
     // Recreate descriptor pools before allocating sets
-    VkDescriptorPoolSize poolSize{};
-    poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    poolSize.descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+    std::array<VkDescriptorPoolSize, 2> poolSizes{};
+    poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT * 10);
+    poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT * 10);
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.poolSizeCount = 1;
-    poolInfo.pPoolSizes = &poolSize;
-    poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+    poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+    poolInfo.pPoolSizes = poolSizes.data();
+    poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT * 10);
 
     _vulkanContext.createDescriptorPool(poolInfo);
     createDescriptorPool();
@@ -825,14 +897,33 @@ void HelloTriangleApplication::updateUniformBuffer(uint32_t currentImage) {
     auto currentTime = std::chrono::high_resolution_clock::now();
     float time = std::chrono::duration<float>(currentTime - startTime).count();
 
-	Camera currentCamera = _cameraManager.getCurrentCamera();
+    Camera currentCamera = _cameraManager.getCurrentCamera();
     UniformBufferObject ubo{};
     ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-	ubo.view = currentCamera.getViewMatrix();
-	ubo.proj = currentCamera.getProjectionMatrix();
+    ubo.view = currentCamera.getViewMatrix();
+    ubo.proj = currentCamera.getProjectionMatrix();
     ubo.proj[1][1] *= -1;
 
+    // Update the center cube
     memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
+
+    // Fix 1: Properly update the lighting info so the sphere isn't pitch black
+    LightingUBO lightUBO{};
+    lightUBO.lightCount = 1;
+    lightUBO.lights[0].type = static_cast<uint32_t>(LightType::Directional);
+    lightUBO.lights[0].direction = glm::normalize(glm::vec3(1.0f, 1.0f, 1.0f));
+    lightUBO.lights[0].color = glm::vec3(1.0f, 1.0f, 1.0f);
+    lightUBO.lights[0].ambient = 0.5f;
+    lightUBO.lights[0].specular = 1.0f;
+    lightUBO.viewPosWorld = glm::vec3(0.0f, 0.0f, 2.0f);
+    lightUBO.shininess = 32.0f;
+
+    // Copy the lighting data to the GPU so the sphere shaders can catch it
+    memcpy(lightingUniformBuffersMapped[currentImage], &lightUBO, sizeof(lightUBO));
+
+    // Fix 2: Translate the sphere along the X-axis so it isn't trapped perfectly inside the (-1, 1) cube!
+    glm::mat4 sphereModel = glm::translate(glm::mat4(1.0f), glm::vec3(2.5f, 0.0f, 0.0f)) * ubo.model;
+    _sphere.updateUniformBuffer(currentImage, sphereModel, ubo.view, ubo.proj);
 }
 
 // --- Helper Implementations ---
