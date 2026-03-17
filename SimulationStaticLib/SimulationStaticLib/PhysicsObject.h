@@ -21,6 +21,8 @@ private:
 
 	glm::vec3 _velocity;
 
+	glm::vec3 _angularVelocity;
+
 	glm::vec3 _gravity{ 0.0f, 0.0f, 0.0f };
 
 	SphereCollider _sphereCollider;
@@ -40,6 +42,7 @@ public:
 	glm::vec3 getPos() const { return _position; }
 	glm::quat getOrientation() const { return _orientation; }
 	glm::vec3 getVel() const { return _velocity; }
+	glm::vec3 getAngularVel() const { return _angularVelocity; }
 	float getMass() const { return _mass; }
 	float getInverseMass() const { return _inverseMass; }
 	const SphereCollider& GetSphere() const { return _sphereCollider; }
@@ -48,6 +51,7 @@ public:
 	void SetPosition(const glm::vec3& newPosition) { _position = newPosition; }
 	void SetOrientation(const glm::quat& newOrientation) { _orientation = newOrientation; }
 	void SetVelocity(const glm::vec3& newVelocity) { _velocity = newVelocity; }
+	void SetAngularVelocity(const glm::vec3& angularVelocity) { _angularVelocity = angularVelocity; }
 	void SetMass(float mass) { _mass = mass; _inverseMass = (mass > 0.0f) ? 1.0f / mass : 0.0f; }
 	void addForce(const glm::vec3& force) { _accumulatedForces += force; }
 	void addAngularDisplacement(const glm::quat& displacement) { _orientation *= displacement; }

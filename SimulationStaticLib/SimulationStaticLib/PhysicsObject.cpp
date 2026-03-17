@@ -12,6 +12,14 @@ void PhysicsObject::IntegrateEuler(float seconds)
 	glm::vec3 acceleration = _gravity * _inverseMass; // Assuming only gravity for this scenario
 	_position += _velocity * seconds;
 	_velocity += acceleration * seconds;
+
+	if (glm::length(_angularVelocity) > 0.0001f)
+	{
+		float angle = glm::length(_angularVelocity) * seconds;
+		glm::vec3 axis = glm::normalize(_angularVelocity);
+		addAngularDisplacement(axis, angle);
+	}
+
 	_sphereCollider.SetPosition(_position);
 }
 
@@ -38,6 +46,13 @@ void PhysicsObject::IntegrateSemiImplicitEuler(float seconds)
 	glm::vec3 acceleration = _gravity * _inverseMass; // Assuming only gravity for this scenario
 	_velocity += acceleration * seconds;
 	_position += _velocity * seconds;
+
+	if (glm::length(_angularVelocity) > 0.0001f)
+	{
+		float angle = glm::length(_angularVelocity) * seconds;
+		glm::vec3 axis = glm::normalize(_angularVelocity);
+		addAngularDisplacement(axis, angle);
+	}
 	_sphereCollider.SetPosition(_position);
 }
 

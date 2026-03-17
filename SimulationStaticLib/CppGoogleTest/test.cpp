@@ -781,6 +781,132 @@ TEST(AngularDisplacement, 90DegreesYZAxis180DegreesXAxis)
 	EXPECT_NEAR(q.z, -0.5f, 0.001f);
 }
 
+TEST(AngularVelocity, 90DegreesXAxis_1Second)
+{
+	PhysicsObject obj;
+	obj.SetOrientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
+	obj.SetAngularVelocity(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f));
+	obj.IntegrateEuler(1.0f); // 1.0s timestep
+	glm::quat q = obj.getOrientation();
+
+	EXPECT_NEAR(q.w, 0.7071f, 0.001f);
+	EXPECT_NEAR(q.x, 0.7071f, 0.001f);
+	EXPECT_NEAR(q.y, 0.0f, 0.001f);
+	EXPECT_NEAR(q.z, 0.0f, 0.001f);
+}
+
+TEST(AngularVelocity, 90DegreesYAxis_HalfSecond)
+{
+	PhysicsObject obj;
+	obj.SetOrientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
+	// 180 deg/s * 0.5s = 90 deg total displacement
+	obj.SetAngularVelocity(glm::vec3(0.0f, glm::radians(180.0f), 0.0f));
+	obj.IntegrateEuler(0.5f);
+	glm::quat q = obj.getOrientation();
+
+	EXPECT_NEAR(q.w, 0.7071f, 0.001f);
+	EXPECT_NEAR(q.x, 0.0f, 0.001f);
+	EXPECT_NEAR(q.y, 0.7071f, 0.001f);
+	EXPECT_NEAR(q.z, 0.0f, 0.001f);
+}
+
+TEST(AngularVelocity, 90DegreesZAxis_TwoSeconds)
+{
+	PhysicsObject obj;
+	obj.SetOrientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
+	// 45 deg/s * 2.0s = 90 deg total displacement
+	obj.SetAngularVelocity(glm::vec3(0.0f, 0.0f, glm::radians(45.0f)));
+	obj.IntegrateSemiImplicitEuler(2.0f); // Test the other integrator too
+	glm::quat q = obj.getOrientation();
+
+	EXPECT_NEAR(q.w, 0.7071f, 0.001f);
+	EXPECT_NEAR(q.x, 0.0f, 0.001f);
+	EXPECT_NEAR(q.y, 0.0f, 0.001f);
+	EXPECT_NEAR(q.z, 0.7071f, 0.001f);
+}
+
+TEST(AngularVelocity, 180DegreesXAxis_QuarterSecond)
+{
+	PhysicsObject obj;
+	obj.SetOrientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
+	// 720 deg/s * 0.25s = 180 deg total displacement
+	obj.SetAngularVelocity(glm::vec3(glm::radians(720.0f), 0.0f, 0.0f));
+	obj.IntegrateEuler(0.25f);
+	glm::quat q = obj.getOrientation();
+
+	EXPECT_NEAR(q.w, 0.0f, 0.001f);
+	EXPECT_NEAR(q.x, 1.0f, 0.001f);
+	EXPECT_NEAR(q.y, 0.0f, 0.001f);
+	EXPECT_NEAR(q.z, 0.0f, 0.001f);
+}
+
+TEST(AngularVelocity, 180DegreesYAxis_0_1Second)
+{
+	PhysicsObject obj;
+	obj.SetOrientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
+	// 1800 deg/s * 0.1s = 180 deg total displacement
+	obj.SetAngularVelocity(glm::vec3(0.0f, glm::radians(1800.0f), 0.0f));
+	obj.IntegrateEuler(0.1f);
+	glm::quat q = obj.getOrientation();
+
+	EXPECT_NEAR(q.w, 0.0f, 0.001f);
+	EXPECT_NEAR(q.x, 0.0f, 0.001f);
+	EXPECT_NEAR(q.y, 1.0f, 0.001f);
+	EXPECT_NEAR(q.z, 0.0f, 0.001f);
+}
+
+TEST(AngularVelocity, 270DegreesZAxis_SemiImplicit_1Second)
+{
+	PhysicsObject obj;
+	obj.SetOrientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
+	obj.SetAngularVelocity(glm::vec3(0.0f, 0.0f, glm::radians(270.0f)));
+	obj.IntegrateSemiImplicitEuler(1.0f);
+	glm::quat q = obj.getOrientation();
+
+	EXPECT_NEAR(q.w, -0.7071f, 0.001f);
+	EXPECT_NEAR(q.x, 0.0f, 0.001f);
+	EXPECT_NEAR(q.y, 0.0f, 0.001f);
+	EXPECT_NEAR(q.z, 0.7071f, 0.001f);
+}
+
+TEST(AngularVelocity, 360DegreesXAxis_MultipleSteps)
+{
+	PhysicsObject obj;
+	obj.SetOrientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
+	// 180 deg/s * 2 updates of 1.0s = 360 deg total displacement
+	obj.SetAngularVelocity(glm::vec3(glm::radians(180.0f), 0.0f, 0.0f));
+	obj.IntegrateEuler(1.0f);
+	obj.IntegrateEuler(1.0f);
+	glm::quat q = obj.getOrientation();
+
+	EXPECT_NEAR(q.w, -1.0f, 0.001f);
+	EXPECT_NEAR(q.x, 0.0f, 0.001f);
+	EXPECT_NEAR(q.y, 0.0f, 0.001f);
+	EXPECT_NEAR(q.z, 0.0f, 0.001f);
+}
+
+TEST(AngularVelocity, 90DegreesXYZAxis_2Seconds)
+{
+	PhysicsObject obj;
+	obj.SetOrientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
+
+	// Normalize the axis first or calculate displacement directly
+	glm::vec3 axis(1.0f, 1.0f, 1.0f);
+	glm::vec3 normalizedAxis = glm::normalize(axis);
+
+	// Velocity needs to be along normalized axis to get exact test overlap
+	// 45 degrees/sec * 2 seconds = 90 Deg Total
+	obj.SetAngularVelocity(normalizedAxis * glm::radians(45.0f));
+	obj.IntegrateEuler(2.0f);
+
+	glm::quat q = obj.getOrientation();
+
+	EXPECT_NEAR(q.w, 0.7071f, 0.001f);
+	EXPECT_NEAR(q.x, 0.4082f, 0.001f);
+	EXPECT_NEAR(q.y, 0.4082f, 0.001f);
+	EXPECT_NEAR(q.z, 0.4082f, 0.001f);
+}
+
 
 
 
