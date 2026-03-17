@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "Sphere.h"
+#include "SphereCollider.h"
 #include "PhysicsObject.h"
 #include <glm/glm.hpp>
 
@@ -7,48 +7,48 @@
 
 TEST(SphereSphereCollision, NoIntersectionCentreAtOrigin)
 {
-	Sphere sphereA(glm::vec3(0, 0, 0), 1);
-	Sphere sphereB(glm::vec3(5, 0, 0), 1);
+	SphereCollider sphereA(glm::vec3(0, 0, 0), 1);
+	SphereCollider sphereB(glm::vec3(5, 0, 0), 1);
 
 	EXPECT_FALSE(sphereA.CollidesWith(sphereB));
 }
 
 TEST(SphereSphereCollision, NoIntersectionOffsetOrigin)
 {
-	Sphere sphereA(glm::vec3(3, 3, 3), 2);
-	Sphere sphereB(glm::vec3(10, 10, 10), 2);
+	SphereCollider sphereA(glm::vec3(3, 3, 3), 2);
+	SphereCollider sphereB(glm::vec3(10, 10, 10), 2);
 
 	EXPECT_FALSE(sphereA.CollidesWith(sphereB));
 }
 
 TEST(SphereSphereCollision, OverlappingSphereCentreAtOrigin)
 {
-	Sphere sphereA(glm::vec3(0, 0, 0), 2);
-	Sphere sphereB(glm::vec3(2, 0, 0), 2);
+	SphereCollider sphereA(glm::vec3(0, 0, 0), 2);
+	SphereCollider sphereB(glm::vec3(2, 0, 0), 2);
 
 	EXPECT_TRUE(sphereA.CollidesWith(sphereB));
 }
 
 TEST(SphereSphereCollision, OverlappingSphereOffsetOrigin)
 {
-	Sphere sphereA(glm::vec3(5, 5, 5), 3);
-	Sphere sphereB(glm::vec3(8, 5, 5), 3);
+	SphereCollider sphereA(glm::vec3(5, 5, 5), 3);
+	SphereCollider sphereB(glm::vec3(8, 5, 5), 3);
 
 	EXPECT_TRUE(sphereA.CollidesWith(sphereB));
 }
 
 TEST(SphereSphereCollision, FullyContainedCentreAtOrigin)
 {
-	Sphere sphereA(glm::vec3(0, 0, 0), 3);
-	Sphere sphereB(glm::vec3(1, 0, 0), 1);
+	SphereCollider sphereA(glm::vec3(0, 0, 0), 3);
+	SphereCollider sphereB(glm::vec3(1, 0, 0), 1);
 
 	EXPECT_TRUE(sphereA.CollidesWith(sphereB));
 }
 
 TEST(SphereSphereCollision, FullyContainedOffsetCentre)
 {
-	Sphere sphereA(glm::vec3(6, 6, 6), 5);
-	Sphere sphereB(glm::vec3(7, 6, 6), 2);
+	SphereCollider sphereA(glm::vec3(6, 6, 6), 5);
+	SphereCollider sphereB(glm::vec3(7, 6, 6), 2);
 
 	EXPECT_TRUE(sphereA.CollidesWith(sphereB));
 }
@@ -91,28 +91,28 @@ TEST(ShortestDistanceToLine, DiagonalLineCase)
 TEST(SphereLineIntersection, NoIntersectionCentreAtOrigin)
 {
 	Line line(glm::vec3(5, 5, 5), glm::vec3(1, 0, 0));
-	Sphere sphere(glm::vec3(0, 0, 0), 3);
+	SphereCollider sphere(glm::vec3(0, 0, 0), 3);
 	EXPECT_FALSE(sphere.Intersects(line));
 }
 
 TEST(SphereLineIntersection, IntersectsSphereCentreAtOrigin)
 {
 	Line line(glm::vec3(10, 0, 0), glm::vec3(-1, 0, 0));
-	Sphere sphere(glm::vec3(10, 0, 0), 5);
+	SphereCollider sphere(glm::vec3(10, 0, 0), 5);
 	EXPECT_TRUE(sphere.Intersects(line));
 }
 
 TEST(SphereLineIntersection, IntersectsSphereLineStartInSphere)
 {
 	Line line(glm::vec3(3, 2, 2), glm::vec3(1, 0, 0));
-	Sphere sphere(glm::vec3(2, 2, 2), 5);
+	SphereCollider sphere(glm::vec3(2, 2, 2), 5);
 	EXPECT_TRUE(sphere.Intersects(line));
 }
 
 TEST(SphereLineIntersection, IntersectsSphereLinePassesThroughSphereCentre)
 {
 	Line line(glm::vec3(-5, 0, 0), glm::vec3(1, 0, 0));
-	Sphere sphere(glm::vec3(0, 0, 0), 3);
+	SphereCollider sphere(glm::vec3(0, 0, 0), 3);
 	EXPECT_TRUE(sphere.Intersects(line));
 }
 
@@ -175,77 +175,77 @@ TEST(ShortestDistanceToPlane, PointNearPlaneInRandomDirection)
 TEST(SpherePlaneCollision, NoIntersectionSphereAbovePlane)
 {
 	Plane plane(glm::vec3(0, 0, 0), glm::vec3(0, 0, 1)); 
-	Sphere sphere(glm::vec3(0, 0, 5), 4);               
+	SphereCollider sphere(glm::vec3(0, 0, 5), 4);               
 	EXPECT_FALSE(sphere.CollidesWith(plane));
 }
 
 TEST(SpherePlaneCollision, TangentTouchingSphereAbovePlane)
 {
 	Plane plane(glm::vec3(0, 0, 0), glm::vec3(0, 0, 1)); 
-	Sphere sphere(glm::vec3(0, 0, 5), 5);               
+	SphereCollider sphere(glm::vec3(0, 0, 5), 5);               
 	EXPECT_TRUE(sphere.CollidesWith(plane));
 }
 
 TEST(SpherePlaneCollision, IntersectingSphereAbovePlane)
 {
 	Plane plane(glm::vec3(0, 0, 0), glm::vec3(0, 0, 1)); 
-	Sphere sphere(glm::vec3(0, 0, 3), 5);               
+	SphereCollider sphere(glm::vec3(0, 0, 3), 5);               
 	EXPECT_TRUE(sphere.CollidesWith(plane));
 }
 
 TEST(SpherePlaneCollision, CentreOnPlane)
 {
 	Plane plane(glm::vec3(1, 1, 1), 1 / sqrtf(3) * glm::vec3(1, 1, 1));
-	Sphere sphere(glm::vec3(0, 2, 1), 1); 
+	SphereCollider sphere(glm::vec3(0, 2, 1), 1); 
 	EXPECT_TRUE(sphere.CollidesWith(plane));
 }
 
 TEST(SpherePlaneCollision, NoIntersectionSphereBelowPlane)
 {
 	Plane plane(glm::vec3(0, 0, 1), glm::vec3(0, 0, 1)); 
-	Sphere sphere(glm::vec3(0, 0, -5), 5);               
+	SphereCollider sphere(glm::vec3(0, 0, -5), 5);               
 	EXPECT_FALSE(sphere.CollidesWith(plane));
 }
 
 TEST(SpherePlaneCollision, TangentTouchingSphereBelowPlane)
 {
 	Plane plane(glm::vec3(0, 0, 1), glm::vec3(0, 0, 1));
-	Sphere sphere(glm::vec3(0, 0, -4), 5);
+	SphereCollider sphere(glm::vec3(0, 0, -4), 5);
 	EXPECT_TRUE(sphere.CollidesWith(plane));
 }
 
 TEST(SpherePlaneCollision, IntersectingWithSkewedPlaneAdjustedRadius)
 {
 	Plane plane(glm::vec3(0, 0, 0), 1 / sqrtf(2) * glm::vec3(1, 1, 0));
-	Sphere sphere(glm::vec3(1, 1, 0), 1.5f);
+	SphereCollider sphere(glm::vec3(1, 1, 0), 1.5f);
 	EXPECT_TRUE(sphere.CollidesWith(plane));
 }
 
 TEST(SpherePlaneCollision, NoIntersectionWithSkewedPlaneAdjustedRadius)
 {
 	Plane plane(glm::vec3(0, 0, 0), 1 / sqrtf(2) * glm::vec3(1, -1, 0)); 
-	Sphere sphere(glm::vec3(1, 2, 3), 0.5f); 
+	SphereCollider sphere(glm::vec3(1, 2, 3), 0.5f); 
 	EXPECT_FALSE(sphere.CollidesWith(plane));
 }
 
 TEST(SpherePlaneCollision, IntersectsWithSkewedPlaneAdjustedRadius)
 {
 	Plane plane(glm::vec3(0, 0, 0), 1 / sqrtf(2) * glm::vec3(1, -1, 0)); 
-	Sphere sphere(glm::vec3(1, 2, 3), 1.0f); 
+	SphereCollider sphere(glm::vec3(1, 2, 3), 1.0f); 
 	EXPECT_TRUE(sphere.CollidesWith(plane));
 }
 
 TEST(SpherePlaneCollision, NonNormalizedPlaneNormalHandled)
 {
 	Plane plane(glm::vec3(0, 0, 0), glm::vec3(0, 0, 10)); 
-	Sphere sphere(glm::vec3(0, 0, 0.9f), 1.0f);          
+	SphereCollider sphere(glm::vec3(0, 0, 0.9f), 1.0f);          
 	EXPECT_TRUE(sphere.CollidesWith(plane));
 }
 
 TEST(SpherePlaneCollision, LargeRadiusAlwaysCollidesWithPlane)
 {
 	Plane plane(glm::vec3(10, 10, 10), glm::vec3(0, 0, 1));
-	Sphere sphere(glm::vec3(-100, -100, -100), 1000.0f);
+	SphereCollider sphere(glm::vec3(-100, -100, -100), 1000.0f);
 	EXPECT_TRUE(sphere.CollidesWith(plane));
 }
 
@@ -257,7 +257,7 @@ static PhysicsObject CreateSphereBody(const glm::vec3& position,
 	float radius,
 	float mass = 1.0f)
 {
-	Sphere sphereCollider(position, radius);
+	SphereCollider sphereCollider(position, radius);
 	PhysicsObject body(position, glm::vec3(0.0f), velocity, sphereCollider, mass);
 	return body;
 }
@@ -562,6 +562,226 @@ TEST(PhysicsResolution_DifferentMass, GlancingCollision_NormalUsesMass_TangentPr
 	EXPECT_FLOAT_EQ(v1n, v1nExpected);
 	EXPECT_FLOAT_EQ(v2n, v2nExpected);
 }
+
+TEST(AngularDisplacement, 90DegreesXAxis)
+{
+	PhysicsObject obj;
+	obj.SetOrientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
+	obj.addAngularDisplacement(glm::vec3(1.0f, 0.0f, 0.0f), glm::radians(90.0f));
+	glm::quat q = obj.getOrientation();
+
+	EXPECT_NEAR(q.w, 0.7071f, 0.001f);
+	EXPECT_NEAR(q.x, 0.7071f, 0.001f);
+	EXPECT_NEAR(q.y, 0.0f, 0.001f);
+	EXPECT_NEAR(q.z, 0.0f, 0.001f);
+}
+
+TEST(AngularDisplacement, 90DegreesYAxis)
+{
+	PhysicsObject obj;
+	obj.SetOrientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
+	obj.addAngularDisplacement(glm::vec3(0.0f, 1.0f, 0.0f), glm::radians(90.0f));
+	glm::quat q = obj.getOrientation();
+
+	EXPECT_NEAR(q.w, 0.7071f, 0.001f);
+	EXPECT_NEAR(q.x, 0.0f, 0.001f);
+	EXPECT_NEAR(q.y, 0.7071f, 0.001f);
+	EXPECT_NEAR(q.z, 0.0f, 0.001f);
+}
+
+TEST(AngularDisplacement, 90DegreesZAxis)
+{
+	PhysicsObject obj;
+	obj.SetOrientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
+	obj.addAngularDisplacement(glm::vec3(0.0f, 0.0f, 1.0f), glm::radians(90.0f));
+	glm::quat q = obj.getOrientation();
+
+	EXPECT_NEAR(q.w, 0.7071f, 0.001f);
+	EXPECT_NEAR(q.x, 0.0f, 0.001f);
+	EXPECT_NEAR(q.y, 0.0f, 0.001f);
+	EXPECT_NEAR(q.z, 0.7071f, 0.001f);
+}
+
+TEST(AngularDisplacement, 180DegreesXAxis)
+{
+	PhysicsObject obj;
+	obj.SetOrientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
+	obj.addAngularDisplacement(glm::vec3(1.0f, 0.0f, 0.0f), glm::radians(180.0f));
+	glm::quat q = obj.getOrientation();
+
+	EXPECT_NEAR(q.w, 0.0f, 0.001f);
+	EXPECT_NEAR(q.x, 1.0f, 0.001f);
+	EXPECT_NEAR(q.y, 0.0f, 0.001f);
+	EXPECT_NEAR(q.z, 0.0f, 0.001f);
+}
+
+TEST(AngularDisplacement, 180DegreesYAxis)
+{
+	PhysicsObject obj;
+	obj.SetOrientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
+	obj.addAngularDisplacement(glm::vec3(0.0f, 1.0f, 0.0f), glm::radians(180.0f));
+	glm::quat q = obj.getOrientation();
+
+	EXPECT_NEAR(q.w, 0.0f, 0.001f);
+	EXPECT_NEAR(q.x, 0.0f, 0.001f);
+	EXPECT_NEAR(q.y, 1.0f, 0.001f);
+	EXPECT_NEAR(q.z, 0.0f, 0.001f);
+}
+
+TEST(AngularDisplacement, 180DegreesZAxis)
+{
+	PhysicsObject obj;
+	obj.SetOrientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
+	obj.addAngularDisplacement(glm::vec3(0.0f, 0.0f, 1.0f), glm::radians(180.0f));
+	glm::quat q = obj.getOrientation();
+
+	EXPECT_NEAR(q.w, 0.0f, 0.001f);
+	EXPECT_NEAR(q.x, 0.0f, 0.001f);
+	EXPECT_NEAR(q.y, 0.0f, 0.001f);
+	EXPECT_NEAR(q.z, 1.0f, 0.001f);
+}
+
+TEST(AngularDisplacement, 270DegreesXAxis)
+{
+	PhysicsObject obj;
+	obj.SetOrientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
+	obj.addAngularDisplacement(glm::vec3(1.0f, 0.0f, 0.0f), glm::radians(270.0f));
+	glm::quat q = obj.getOrientation();
+
+	EXPECT_NEAR(q.w, -0.7071f, 0.001f);
+	EXPECT_NEAR(q.x, 0.7071f, 0.001f);
+	EXPECT_NEAR(q.y, 0.0f, 0.001f);
+	EXPECT_NEAR(q.z, 0.0f, 0.001f);
+}
+
+TEST(AngularDisplacement, 270DegreesYAxis)
+{
+	PhysicsObject obj;
+	obj.SetOrientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
+	obj.addAngularDisplacement(glm::vec3(0.0f, 1.0f, 0.0f), glm::radians(270.0f));
+	glm::quat q = obj.getOrientation();
+
+	EXPECT_NEAR(q.w, -0.7071f, 0.001f);
+	EXPECT_NEAR(q.x, 0.0f, 0.001f);
+	EXPECT_NEAR(q.y, 0.7071f, 0.001f);
+	EXPECT_NEAR(q.z, 0.0f, 0.001f);
+}
+
+TEST(AngularDisplacement, 270DegreesZAxis)
+{
+	PhysicsObject obj;
+	obj.SetOrientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
+	obj.addAngularDisplacement(glm::vec3(0.0f, 0.0f, 1.0f), glm::radians(270.0f));
+	glm::quat q = obj.getOrientation();
+
+	EXPECT_NEAR(q.w, -0.7071f, 0.001f);
+	EXPECT_NEAR(q.x, 0.0f, 0.001f);
+	EXPECT_NEAR(q.y, 0.0f, 0.001f);
+	EXPECT_NEAR(q.z, 0.7071f, 0.001f);
+}
+
+TEST(AngularDisplacement, 360DegreesXAxis)
+{
+	PhysicsObject obj;
+	obj.SetOrientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
+	obj.addAngularDisplacement(glm::vec3(1.0f, 0.0f, 0.0f), glm::radians(360.0f));
+	glm::quat q = obj.getOrientation();
+
+	EXPECT_NEAR(q.w, -1.0f, 0.001f);
+	EXPECT_NEAR(q.x, 0.0f, 0.001f);
+	EXPECT_NEAR(q.y, 0.0f, 0.001f);
+	EXPECT_NEAR(q.z, 0.0f, 0.001f);
+}
+
+TEST(AngularDisplacement, 360DegreesYAxis)
+{
+	PhysicsObject obj;
+	obj.SetOrientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
+	obj.addAngularDisplacement(glm::vec3(0.0f, 1.0f, 0.0f), glm::radians(360.0f));
+	glm::quat q = obj.getOrientation();
+
+	EXPECT_NEAR(q.w, -1.0f, 0.001f);
+	EXPECT_NEAR(q.x, 0.0f, 0.001f);
+	EXPECT_NEAR(q.y, 0.0f, 0.001f);
+	EXPECT_NEAR(q.z, 0.0f, 0.001f);
+}
+
+TEST(AngularDisplacement, 360DegreesZAxis)
+{
+	PhysicsObject obj;
+	obj.SetOrientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
+	obj.addAngularDisplacement(glm::vec3(0.0f, 0.0f, 1.0f), glm::radians(360.0f));
+	glm::quat q = obj.getOrientation();
+
+	EXPECT_NEAR(q.w, -1.0f, 0.001f);
+	EXPECT_NEAR(q.x, 0.0f, 0.001f);
+	EXPECT_NEAR(q.y, 0.0f, 0.001f);
+	EXPECT_NEAR(q.z, 0.0f, 0.001f);
+}
+
+TEST(AngularDisplacement, 90DegreesXYZAxis)
+{
+	PhysicsObject obj;
+	obj.SetOrientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
+	obj.addAngularDisplacement(glm::vec3(1.0f, 1.0f, 1.0f), glm::radians(90.0f));
+	glm::quat q = obj.getOrientation();
+
+	// Axis is normalized to (0.577, 0.577, 0.577)
+	// sin(45) = 0.7071, cos(45) = 0.7071
+	// Values for x,y,z will be 0.577 * 0.7071 = 0.4082
+	EXPECT_NEAR(q.w, 0.7071f, 0.001f);
+	EXPECT_NEAR(q.x, 0.4082f, 0.001f);
+	EXPECT_NEAR(q.y, 0.4082f, 0.001f);
+	EXPECT_NEAR(q.z, 0.4082f, 0.001f);
+}
+
+TEST(AngularDisplacement, 90DegreesXYAxis180DegreesZAxis)
+{
+	PhysicsObject obj;
+	obj.SetOrientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
+
+	// 1. +90 degrees around XY
+	obj.addAngularDisplacement(glm::vec3(1.0f, 1.0f, 0.0f), glm::radians(90.0f));
+	// 2. +180 degrees around Z
+	obj.addAngularDisplacement(glm::vec3(0.0f, 0.0f, 1.0f), glm::radians(180.0f));
+
+	glm::quat q = obj.getOrientation();
+
+	EXPECT_NEAR(q.w, 0.0f, 0.001f);
+	EXPECT_NEAR(q.x, 0.5f, 0.001f);
+	EXPECT_NEAR(q.y, -0.5f, 0.001f);
+	EXPECT_NEAR(q.z, 0.7071f, 0.001f);
+}
+
+TEST(AngularDisplacement, 90DegreesXZAxis180DegreesYAxis)
+{
+	PhysicsObject obj;
+	obj.SetOrientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
+	obj.addAngularDisplacement(glm::vec3(1.0f, 0.0f, 1.0f), glm::radians(90.0f));
+	obj.addAngularDisplacement(glm::vec3(0.0f, 1.0f, 0.0f), glm::radians(180.0f));
+	glm::quat q = obj.getOrientation();
+
+	EXPECT_NEAR(q.w, 0.0f, 0.001f);
+	EXPECT_NEAR(q.x, -0.5f, 0.001f);
+	EXPECT_NEAR(q.y, 0.7071f, 0.001f);
+	EXPECT_NEAR(q.z, 0.5f, 0.001f);
+}
+
+TEST(AngularDisplacement, 90DegreesYZAxis180DegreesXAxis)
+{
+	PhysicsObject obj;
+	obj.SetOrientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
+	obj.addAngularDisplacement(glm::vec3(0.0f, 1.0f, 1.0f), glm::radians(90.0f));
+	obj.addAngularDisplacement(glm::vec3(1.0f, 0.0f, 0.0f), glm::radians(180.0f));
+	glm::quat q = obj.getOrientation();
+
+	EXPECT_NEAR(q.w, 0.0f, 0.001f);
+	EXPECT_NEAR(q.x, 0.7071f, 0.001f);
+	EXPECT_NEAR(q.y, 0.5f, 0.001f);
+	EXPECT_NEAR(q.z, -0.5f, 0.001f);
+}
+
+
 
 
 

@@ -86,3 +86,14 @@ void PhysicsObject::ResolveSphereSphereCollision(PhysicsObject& other)
 	_velocity += impulse / m1;
 	other.SetVelocity(other.getVel() - impulse / m2);
 }
+
+void PhysicsObject::addAngularDisplacement(const glm::vec3& axis, const float& radians)
+{
+	glm::vec3 normalizedAxis = glm::normalize(axis);
+	float x = glm::cos(radians / 2.0f);
+	float y = normalizedAxis.x * glm::sin(radians / 2.0f);
+	float z = normalizedAxis.y * glm::sin(radians / 2.0f);
+	float w = normalizedAxis.z * glm::sin(radians / 2.0f);
+	glm::quat angularDisplacement = glm::quat(x, y, z, w);
+	addAngularDisplacement(angularDisplacement);
+}
