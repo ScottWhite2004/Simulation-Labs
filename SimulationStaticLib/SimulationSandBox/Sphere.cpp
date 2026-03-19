@@ -18,7 +18,7 @@ void Sphere::create() {
 			const float u = 1.0f - (static_cast<float>(longNumber) / longitudeBands);
 			const float v = 1.0f - (static_cast<float>(latNumber) / latitudeBands);
 			glm::vec3 normal = glm::normalize(glm::vec3(x, y, z));
-			_localVertices.push_back({ {glm::vec3(_radius * x, _radius * y, _radius * z) + getPos()}, {1,1,1}, {u, v}, normal });
+			_localVertices.push_back({ {glm::vec3(_radius * x, _radius * y, _radius * z)}, {1,1,1}, {u, v}, normal });
 		}
 	}
 	// Create indices

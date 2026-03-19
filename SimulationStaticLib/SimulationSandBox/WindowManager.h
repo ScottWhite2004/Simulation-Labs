@@ -5,8 +5,8 @@ class WindowManager
 {
 
 	GLFWwindow* _window{ nullptr };
-	const uint32_t WIDTH = 800;
-	const uint32_t HEIGHT = 600;
+	uint32_t WIDTH = 1920;
+	uint32_t HEIGHT = 1080;
 	bool framebufferResized = false;
 
 
@@ -29,6 +29,8 @@ public:
 		auto wm = reinterpret_cast<WindowManager*>(glfwGetWindowUserPointer(window));
 		if (wm) {
 			wm->framebufferResized = true;
+			wm->WIDTH = width;
+			wm->HEIGHT = height;
 		}
 	}
 

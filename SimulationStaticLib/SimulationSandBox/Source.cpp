@@ -65,41 +65,6 @@ struct TimeUBO
     float pad2;
 };
 
-std::vector<Vertex> vertices = {
-    // -X -Y +Z
-    { {-1.0f, -1.0f,  1.0f}, {0,0,0}, {0,0} },
-    // +X -Y +Z
-    { { 1.0f, -1.0f,  1.0f}, {0,0,0}, {0,0} },
-    // +X +Y +Z
-    { { 1.0f,  1.0f,  1.0f}, {0,0,0}, {0,0} },
-    // -X +Y +Z
-    { {-1.0f,  1.0f,  1.0f}, {0,0,0}, {0,0} },
-
-    // -X -Y -Z
-    { {-1.0f, -1.0f, -1.0f}, {0,0,0}, {0,0} },
-    // +X -Y -Z
-    { { 1.0f, -1.0f, -1.0f}, {0,0,0}, {0,0} },
-    // +X +Y -Z
-    { { 1.0f,  1.0f, -1.0f}, {0,0,0}, {0,0} },
-    // -X +Y -Z
-    { {-1.0f,  1.0f, -1.0f}, {0,0,0}, {0,0} },
-};
-
-std::vector<uint16_t> indices = {
-    // +Z (front)
-    0, 2, 1, 0, 3, 2,
-    // -Z (back)
-    4, 5, 6, 4, 6, 7,
-    // +X (right)
-    1, 2, 6, 1, 6, 5,
-    // -X (left)
-    0, 7, 3, 0, 4, 7,
-    // +Y (top)
-    3, 7, 6, 3, 6, 2,
-    // -Y (bottom)
-    0, 1, 5, 0, 5, 4,
-};
-
 class HelloTriangleApplication {
 public:
     HelloTriangleApplication()
@@ -131,6 +96,8 @@ private:
 
     //Colour Controlled From ImGui
 	ImVec4 uiClearColour = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+    glm::vec3 displacement = glm::vec3(0.0f);
+	float displacementRadians = 0.0f;
 
     //Timestep controlled by imgui
     float simulationTimeStep = 0.0f;
@@ -142,6 +109,10 @@ private:
 
 	float simulationTimeAculator = 0.0f;
 
+    //Camera controls
+    float cameraMoveSpeed = 4.0f;
+    float cameraLookSpeed = 1.8f;
+
     //Scenario Management
     Scenario _selectedScenario;
 
@@ -151,10 +122,6 @@ private:
 	VkImageView depthImageView = VK_NULL_HANDLE;
 
     // --- Buffers and Memory ---
-    VkBuffer vertexBuffer = VK_NULL_HANDLE;
-    VkDeviceMemory vertexBufferMemory = VK_NULL_HANDLE;
-    VkBuffer indexBuffer = VK_NULL_HANDLE;
-    VkDeviceMemory indexBufferMemory = VK_NULL_HANDLE;
     std::vector<VkBuffer> uniformBuffers;
     std::vector<VkDeviceMemory> uniformBuffersMemory;
     std::vector<void*> uniformBuffersMapped;
@@ -186,8 +153,6 @@ private:
 
     void createGraphicsPipeline();
 
-    void createVertexBuffer();
-    void createIndexBuffer();
     void createUniformBuffers();
     void createDescriptorPool();
     void createDescriptorSets();
@@ -209,6 +174,8 @@ private:
     void cleanupSwapChain();
     void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
     void updateUniformBuffer(uint32_t currentImage);
+
+
 
 
     // --- Helper Functions ---
@@ -240,6 +207,7 @@ private:
 
     //Simulation control
     void update(float seconds);
+    void updateCameraControls(float dt);
     
 };
 
@@ -259,18 +227,19 @@ void HelloTriangleApplication::initVulkan() {
 	_swapChainManager.createSwapChain();
     _swapChainManager.createImageViews();
 
-    // --- Addition: Create and pass the camera ---
-    VkExtent2D extent = _swapChainManager.getExtent();
-    float aspectRatio = static_cast<float>(extent.width) / static_cast<float>(extent.height);
+    const VkExtent2D extent = _swapChainManager.getExtent();
+    const float aspect = (extent.height > 0)
+        ? static_cast<float>(extent.width) / static_cast<float>(extent.height)
+        : 1.0f;
 
     mainCamera = Camera(
-        glm::vec3(0.0f, 0.0f, 5.0f), // eye (position)
-        glm::vec3(0.0f, 0.0f, 0.0f), // center (look at)
-        glm::vec3(0.0f, 1.0f, 0.0f), // up
-        glm::radians(90.0f),         // fovy
-        aspectRatio,                 // aspect ratio
-        0.1f,                        // near plane
-        100.0f                       // far plane
+        glm::vec3(0.0f, 0.0f, 5.0f),
+        glm::vec3(0.0f, 0.0f, 0.0f),
+        glm::vec3(0.0f, 1.0f, 0.0f),
+        90.0f,
+        aspect,
+        0.1f,
+        300.0f
     );
 
     _cameraManager.addCamera(mainCamera);
@@ -328,10 +297,9 @@ void HelloTriangleApplication::initVulkan() {
 	Material defaultMaterial = Material(glm::vec4(1.0f), 0.0f, 1.0f, _texManager.getTexture("default"));
 	_sphere = Sphere(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f), glm::vec3(0.0f), SphereCollider(glm::vec3(0.0f,0.0f,0.0f),1.0f), 1.0f, defaultMaterial, 1.0f);
 	_sphere.create();
-    createVertexBuffer();
-    createIndexBuffer();
     createUniformBuffers();
     createDescriptorPool();
+    _sphere.SetAngularVelocity(glm::vec3(0.0f, 0.1f, 0.0f));
 
     std::vector<VkDescriptorBufferInfo> lightingBufferInfos(MAX_FRAMES_IN_FLIGHT);
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
@@ -340,7 +308,7 @@ void HelloTriangleApplication::initVulkan() {
         lightingBufferInfos[i].range = sizeof(LightingUBO);
     }
 
-    _sphere.upload(_vulkanContext, MAX_FRAMES_IN_FLIGHT, _texManager.getTexture("default")->getTextureImageView(), _texManager.getTexture("default")->getTextureSampler(), lightingBufferInfos);
+    _sphere.upload(_vulkanContext, MAX_FRAMES_IN_FLIGHT, defaultMaterial.getTextureImageView(), defaultMaterial.getTextureSampler(), lightingBufferInfos);
     createDescriptorSets();
     createCommandBuffers();
     initImGui();
@@ -411,6 +379,50 @@ void HelloTriangleApplication::cleanupImGui() {
 void HelloTriangleApplication::update(float seconds)
 {
     _selectedScenario.OnUpdate(seconds);
+	_sphere.IntegrateEuler(seconds);
+}
+
+void HelloTriangleApplication::updateCameraControls(float dt)
+{
+    if (dt <= 0.0f) {
+        return;
+    }
+
+    ImGuiIO& io = ImGui::GetIO();
+    if (io.WantCaptureKeyboard) {
+        return;
+    }
+
+    GLFWwindow* window = _windowManager.getWindow();
+    const float moveStep = cameraMoveSpeed * dt;
+    const float lookStep = cameraLookSpeed * dt;
+
+    float right = 0.0f;
+    float forward = 0.0f;
+    float up = 0.0f;
+
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) forward += moveStep;
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) forward -= moveStep;
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) right += moveStep;
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) right -= moveStep;
+    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) up += moveStep;
+    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) up -= moveStep;
+
+    if (right != 0.0f || forward != 0.0f || up != 0.0f) {
+        _cameraManager.panCurrentCamera(right, forward, up);
+    }
+
+    float yaw = 0.0f;
+    float pitch = 0.0f;
+
+    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) yaw += lookStep;
+    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) yaw -= lookStep;
+    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) pitch += lookStep;
+    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) pitch -= lookStep;
+
+    if (yaw != 0.0f || pitch != 0.0f) {
+        _cameraManager.rotateCurrentCamera(yaw, pitch);
+    }
 }
 
 void HelloTriangleApplication::mainLoop() {
@@ -423,6 +435,8 @@ void HelloTriangleApplication::mainLoop() {
         float frameSeconds =
             std::chrono::duration<float>(currentTime - previousTime).count();
         previousTime = currentTime;
+
+		updateCameraControls(frameSeconds);
 
         // If timestep is <= 0, treat as "no simulation stepping"
         float dt = simulationTimeStep > 0.0f ? simulationTimeStep : frameSeconds;
@@ -457,15 +471,7 @@ void HelloTriangleApplication::cleanup() {
 	
     _renderPassManager.destroyRenderPass();
 
-
 	cleanupImGui();
-
-
-    vkDestroyBuffer(_vulkanContext.getDevice(), indexBuffer, nullptr);
-    vkFreeMemory(_vulkanContext.getDevice(), indexBufferMemory, nullptr);
-
-    vkDestroyBuffer(_vulkanContext.getDevice(), vertexBuffer, nullptr);
-    vkFreeMemory(_vulkanContext.getDevice(), vertexBufferMemory, nullptr);
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         vkDestroyBuffer(_vulkanContext.getDevice(), uniformBuffers[i], nullptr);
@@ -526,42 +532,6 @@ void HelloTriangleApplication::createGraphicsPipeline() {
 
     vkDestroyShaderModule(_vulkanContext.getDevice(), fragShaderModule, nullptr);
     vkDestroyShaderModule(_vulkanContext.getDevice(), vertShaderModule, nullptr);
-}
-
-void HelloTriangleApplication::createVertexBuffer() {
-    VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
-
-    void* data;
-    vkMapMemory(_vulkanContext.getDevice(), stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, vertices.data(), (size_t)bufferSize);
-    vkUnmapMemory(_vulkanContext.getDevice(), stagingBufferMemory);
-
-    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
-    copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
-
-    vkDestroyBuffer(_vulkanContext.getDevice(), stagingBuffer, nullptr);
-    vkFreeMemory(_vulkanContext.getDevice(), stagingBufferMemory, nullptr);
-}
-
-void HelloTriangleApplication::createIndexBuffer() {
-    VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
-
-    void* data;
-    vkMapMemory(_vulkanContext.getDevice(), stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, indices.data(), (size_t)bufferSize);
-    vkUnmapMemory(_vulkanContext.getDevice(), stagingBufferMemory);
-
-    createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
-    copyBuffer(stagingBuffer, indexBuffer, bufferSize);
-
-    vkDestroyBuffer(_vulkanContext.getDevice(), stagingBuffer, nullptr);
-    vkFreeMemory(_vulkanContext.getDevice(), stagingBufferMemory, nullptr);
 }
 
 void HelloTriangleApplication::createUniformBuffers() {
@@ -658,12 +628,12 @@ void HelloTriangleApplication::drawFrame() {
     uint32_t imageIndex;
     VkResult result = vkAcquireNextImageKHR(_vulkanContext.getDevice(), _swapChainManager.getSwapChain(), UINT64_MAX, _syncManager.getImageAvailableSemaphores()[currentFrame], VK_NULL_HANDLE, &imageIndex);
 
-    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || _windowManager.isFramebufferResized()) {
+        _windowManager.resetFramebufferResized();
         recreateSwapChain();
-        return;
     }
-    else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
-        throw std::runtime_error("Failed to acquire swap chain image!");
+    else if (result != VK_SUCCESS) {
+        throw std::runtime_error("failed to present swap chain image!");
     }
 
     _syncManager.waitForFrame(currentFrame);
@@ -704,36 +674,46 @@ void HelloTriangleApplication::drawFrame() {
         }
         _selectedScenario.ImGuiMain();
 
-   //     if (ImGui::BeginMenu("Colour"))
-   //     {
-			//ImGui::ColorPicker4("Clear Colour", (float*)&uiClearColour);
-			//ImGui::EndMenu();
-   //     }
-   //     if (ImGui::BeginMenu("Camera"))
-   //     {
-			//ImGui::EndMenu();
-   //     }
-   //     if (ImGui::BeginMenu("Material"))
-   //     {
-			//ImGui::EndMenu();
-   //     }
-   //     if (ImGui::BeginMenu("Simulation"))
-   //     {
-   //         if (ImGui::Button(simulationRunning ? "Stop" : "Start"))
-   //         {
-			//	simulationRunning = !simulationRunning;
-   //         }
-			//ImGui::SameLine();
-			//if(ImGui::Button("Step Forward"))
-   //         {
-   //             if(simulationTimeStep > 0.0f)
-   //             {
-   //                 update(simulationTimeStep);
-			//	}
-   //         }
-			//ImGui::InputFloat("timestep", &simulationTimeStep);
-   //         ImGui::EndMenu();
-   //     }
+        if (ImGui::BeginMenu("Colour"))
+        {
+			ImGui::ColorPicker4("Clear Colour", (float*)&uiClearColour);
+			ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Camera"))
+        {
+			ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Material"))
+        {
+			ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Simulation"))
+        {
+            if (ImGui::Button(simulationRunning ? "Stop" : "Start"))
+            {
+				simulationRunning = !simulationRunning;
+            }
+			ImGui::SameLine();
+			if(ImGui::Button("Step Forward"))
+            {
+                if(simulationTimeStep > 0.0f)
+                {
+                    update(simulationTimeStep);
+				}
+            }
+			ImGui::InputFloat("timestep", &simulationTimeStep);
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Displacement"))
+        {
+			ImGui::InputFloat3("Displacement", (float*)&displacement);
+			ImGui::InputFloat("Radians", &displacementRadians);
+            if (ImGui::Button("Apply Displacement"))
+            {
+				_sphere.addAngularDisplacement(displacement,displacementRadians);
+            }
+			ImGui::EndMenu();
+        }
 
 		ImGui::EndMainMenuBar();
     }
@@ -799,6 +779,13 @@ void HelloTriangleApplication::recreateSwapChain() {
     cleanupSwapChain();
 
     _swapChainManager.createSwapChain();
+
+    // inside HelloTriangleApplication::recreateSwapChain(), after _swapChainManager.createSwapChain()
+    const VkExtent2D extent = _swapChainManager.getExtent();
+    if (extent.height > 0) {
+        _cameraManager.setCurrentCameraAspect(static_cast<float>(extent.width) / static_cast<float>(extent.height));
+    }
+    _windowManager.resetFramebufferResized();
     _swapChainManager.createImageViews();
 
     _renderPassManager.createRenderPass();
@@ -922,7 +909,7 @@ void HelloTriangleApplication::updateUniformBuffer(uint32_t currentImage) {
 
     Camera currentCamera = _cameraManager.getCurrentCamera();
     UniformBufferObject ubo{};
-    ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	ubo.model = glm::mat4(1.0f);
     ubo.view = currentCamera.getViewMatrix();
     ubo.proj = currentCamera.getProjectionMatrix();
     ubo.proj[1][1] *= -1;
@@ -934,12 +921,14 @@ void HelloTriangleApplication::updateUniformBuffer(uint32_t currentImage) {
     lightUBO.lights[0].color = glm::vec3(1.0f, 1.0f, 1.0f);
     lightUBO.lights[0].ambient = 0.5f;
     lightUBO.lights[0].specular = 1.0f;
-    lightUBO.viewPosWorld = glm::vec3(0.0f, 0.0f, 2.0f);
+    lightUBO.viewPosWorld = currentCamera.getEye();
     lightUBO.shininess = 32.0f;
 
     memcpy(lightingUniformBuffersMapped[currentImage], &lightUBO, sizeof(lightUBO));
 
-    glm::mat4 sphereModel = ubo.model * glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));
+	const glm::mat4 translation = glm::translate(glm::mat4(1.0f), _sphere.getPos());
+    const glm::mat4 rotation = glm::mat4_cast(glm::normalize(_sphere.getOrientation()));
+	const glm::mat4 sphereModel = translation * rotation;
     _sphere.updateUniformBuffer(currentImage, sphereModel, ubo.view, ubo.proj);
 }
 

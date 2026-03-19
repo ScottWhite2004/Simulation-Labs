@@ -15,5 +15,6 @@ public:
 	const Camera getCurrentCamera() const { return _currentCamera; }
 	void rotateCurrentCamera(float yaw, float pitch);
 	void panCurrentCamera(float rightUnits, float forwardUnits, float upUnits);
+	void setCurrentCameraAspect(float aspect) { _currentCamera.setAspect(aspect); }
 };
 

@@ -47,6 +47,18 @@ layout(set = 0, binding = 2) uniform LightingUBO
 
 layout(location = 0) out vec4 outColor;
 
+vec3 proceduralChecker(vec2 uv)
+{
+    const float checkerScale = 10.0;
+    const vec3 colorA = vec3(0.08, 0.08, 0.08);
+    const vec3 colorB = vec3(0.92, 0.92, 0.92);
+
+    vec2 cell = floor(uv * checkerScale);
+    float parity = mod(cell.x + cell.y, 2.0);
+
+    return mix(colorA, colorB, parity);
+}
+
 void main()
 {
     vec3 N = normalize(fragNormal);
@@ -99,12 +111,9 @@ void main()
         lit = vec3(1.0);
     }
 
-    vec3 albedo = texture(texSampler, fragTexCoord).rgb;
-    vec3 baseColor = albedo * fragColor;
+    vec3 checker = proceduralChecker(fragTexCoord);
+    vec3 texTint = texture(texSampler, fragTexCoord).rgb;
 
+    vec3 baseColor = checker * texTint * fragColor;
     outColor = vec4(baseColor * lit, 1.0);
 }
-```
-
-Then recompile to the SPIR-V files your app loads (`shaders/vert.spv`, `shaders/frag.spv`) and rebuild.  
-If you want, I can also provide a small shader compile script for Windows/Visual Studio.
