@@ -1,0 +1,2 @@
+& "$env:VULKAN_SDK\Bin\glslc.exe" .\SHADERS\shader.vert -o .\SHADERS\vert.spv
+& "$env:VULKAN_SDK\Bin\glslc.exe" .\SHADERS\shader.frag -o .\SHADERS\frag.spv

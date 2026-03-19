@@ -1,6 +1,6 @@
 #version 450
 
-layout(binding = 0) uniform UniformBufferObject {
+layout(set = 0, binding = 0) uniform UniformBufferObject {
     mat4 model;
     mat4 view;
     mat4 proj;
@@ -9,24 +9,20 @@ layout(binding = 0) uniform UniformBufferObject {
 // Inputs from the vertex buffer
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inColor;
-layout(location = 2) in vec3 inNormal; // Added: Normal from the vertex data
+layout(location = 2) in vec2 inTexCoord;
+layout(location = 3) in vec3 inNormal;
 
-// Outputs down the pipeline to the fragment shader
+// Outputs to fragment shader
 layout(location = 0) out vec3 fragColor;
-layout(location = 1) out vec3 fragPos;   // Added: World position of the fragment
-layout(location = 2) out vec3 fragNormal; // Added: World space normal
+layout(location = 1) out vec3 fragPos;
+layout(location = 2) out vec3 fragNormal;
+layout(location = 3) out vec2 fragTexCoord;
 
 void main() {
-    // Standard screen-space projection
     gl_Position = ubo.proj * ubo.view * ubo.model * vec4(inPosition, 1.0);
-    
-    // Pass color to fragment shader
+
     fragColor = inColor;
-    
-    // Calculate world position for lighting calculations
     fragPos = vec3(ubo.model * vec4(inPosition, 1.0));
-    
-    // Transform the normal vector to world space
-    // Using transpose(inverse()) ensures normals remain correct even if the object is scaled non-uniformly
     fragNormal = mat3(transpose(inverse(ubo.model))) * inNormal;
+    fragTexCoord = inTexCoord;
 }

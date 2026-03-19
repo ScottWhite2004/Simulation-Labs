@@ -1,41 +1,110 @@
 #version 450
 
-// Inputs from the vertex shader
 layout(location = 0) in vec3 fragColor;
 layout(location = 1) in vec3 fragPos;
 layout(location = 2) in vec3 fragNormal;
+layout(location = 3) in vec2 fragTexCoord;
 
-// Uniform buffer containing lighting and camera data
-layout(binding = 0) uniform LightingUBO {
-    vec3 lightPos;
-    vec3 viewPos;
-    vec3 lightColor;
-} ubo;
+layout(set = 0, binding = 1) uniform sampler2D texSampler;
+
+// Match C++ LightType enum
+const uint LIGHT_TYPE_POINT = 0u;
+const uint LIGHT_TYPE_DIRECTIONAL = 1u;
+const uint LIGHT_TYPE_SPOT = 2u;
+
+struct GPULight
+{
+    vec3 position;  float _padPos;
+    vec3 direction; float _padDir;
+    vec3 color;     float _padColor;
+
+    uint type;
+    float ambient;
+    float specular;
+    float pad0;
+
+    float innerCos;
+    float outerCos;
+    float range;
+    float pad4;
+
+    float attConst;
+    float attLinear;
+    float attQuadratic;
+    float pad5;
+};
+
+layout(set = 0, binding = 2) uniform LightingUBO
+{
+    GPULight lights[8];
+    vec3 viewPosWorld;
+    float shininess;
+    int lightCount;
+    uint padA;
+    uint padB;
+    uint padC;
+} lighting;
 
 layout(location = 0) out vec4 outColor;
 
-void main() {
-    // 1. Ambient lighting
-    float ambientStrength = 0.1;
-    vec3 ambient = ambientStrength * ubo.lightColor;
-    
-    // Normalize the normal vector (interpolated normals might not be unit length)
-    vec3 norm = normalize(fragNormal);
-    
-    // 2. Diffuse lighting
-    vec3 lightDir = normalize(ubo.lightPos - fragPos);
-    float diff = max(dot(norm, lightDir), 0.0);
-    vec3 diffuse = diff * ubo.lightColor;
-    
-    // 3. Specular lighting
-    float specularStrength = 0.5;
-    float shininess = 32.0;
-    vec3 viewDir = normalize(ubo.viewPos - fragPos);
-    vec3 reflectDir = reflect(-lightDir, norm);  
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess);
-    vec3 specular = specularStrength * spec * ubo.lightColor;  
-    
-    // Combine results
-    vec3 result = (ambient + diffuse + specular) * fragColor;
-    outColor = vec4(result, 1.0);
+void main()
+{
+    vec3 N = normalize(fragNormal);
+    vec3 V = normalize(lighting.viewPosWorld - fragPos);
+
+    vec3 lit = vec3(0.0);
+
+    int count = clamp(lighting.lightCount, 0, 8);
+    for (int i = 0; i < count; ++i)
+    {
+        GPULight Ld = lighting.lights[i];
+
+        vec3 L;
+        float attenuation = 1.0;
+
+        if (Ld.type == LIGHT_TYPE_DIRECTIONAL)
+        {
+            L = normalize(-Ld.direction);
+        }
+        else
+        {
+            vec3 toLight = Ld.position - fragPos;
+            float dist = length(toLight);
+            L = (dist > 0.0001) ? (toLight / dist) : vec3(0.0, 0.0, 1.0);
+
+            attenuation = 1.0 / (Ld.attConst + Ld.attLinear * dist + Ld.attQuadratic * dist * dist);
+
+            if (Ld.type == LIGHT_TYPE_SPOT)
+            {
+                float theta = dot(normalize(-Ld.direction), L);
+                float eps = max(Ld.innerCos - Ld.outerCos, 0.0001);
+                float intensity = clamp((theta - Ld.outerCos) / eps, 0.0, 1.0);
+                attenuation *= intensity;
+            }
+        }
+
+        float ndotl = max(dot(N, L), 0.0);
+        vec3 ambient = Ld.ambient * Ld.color;
+        vec3 diffuse = ndotl * Ld.color;
+
+        vec3 R = reflect(-L, N);
+        float spec = pow(max(dot(V, R), 0.0), max(lighting.shininess, 1.0));
+        vec3 specular = Ld.specular * spec * Ld.color;
+
+        lit += (ambient + diffuse + specular) * attenuation;
+    }
+
+    if (count == 0)
+    {
+        lit = vec3(1.0);
+    }
+
+    vec3 albedo = texture(texSampler, fragTexCoord).rgb;
+    vec3 baseColor = albedo * fragColor;
+
+    outColor = vec4(baseColor * lit, 1.0);
 }
+```
+
+Then recompile to the SPIR-V files your app loads (`shaders/vert.spv`, `shaders/frag.spv`) and rebuild.  
+If you want, I can also provide a small shader compile script for Windows/Visual Studio.

@@ -45,6 +45,9 @@
 #include "PipelineManager.h"
 #include "Scenario.h"
 #include "Sphere.h"
+#include "ClearScenario.h"
+#include "AngularDisplacement.h"
+#include "AngularVelocity.h"
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
 
@@ -99,6 +102,12 @@ std::vector<uint16_t> indices = {
 
 class HelloTriangleApplication {
 public:
+    HelloTriangleApplication()
+        : _clearScenario(&uiClearColour)
+        , _selectedScenario(_clearScenario)
+    {
+    }
+
     void run();
 
 private:
@@ -113,6 +122,11 @@ private:
     textureManager _texManager;
 	Image _imageHelper;
 
+	//Scenario Management
+	ClearScenario _clearScenario;
+	AngularDisplacement _angularDisplacementScenario;
+	AngularVelocity _angularVelocityScenario;
+
     uint32_t currentFrame = 0;
 
     //Colour Controlled From ImGui
@@ -126,7 +140,7 @@ private:
 
 	bool framebufferResized = false;
 
-	float simulationTimeAcumulator = 0.0f;
+	float simulationTimeAculator = 0.0f;
 
     //Scenario Management
     Scenario _selectedScenario;
@@ -253,7 +267,7 @@ void HelloTriangleApplication::initVulkan() {
         glm::vec3(0.0f, 0.0f, 5.0f), // eye (position)
         glm::vec3(0.0f, 0.0f, 0.0f), // center (look at)
         glm::vec3(0.0f, 1.0f, 0.0f), // up
-        glm::radians(45.0f),         // fovy
+        glm::radians(90.0f),         // fovy
         aspectRatio,                 // aspect ratio
         0.1f,                        // near plane
         100.0f                       // far plane
@@ -415,18 +429,18 @@ void HelloTriangleApplication::mainLoop() {
 
         if (simulationRunning && simulationTimeStep > 0.0f) {
             // Fixed timestep with accumulator
-            simulationTimeAcumulator += frameSeconds;
+            simulationTimeAculator += frameSeconds;
 
             // Optionally clamp to avoid spiral of death after long pauses
             const float maxAccumulatedTime = simulationTimeStep * 8.0f;
-            if (simulationTimeAcumulator > maxAccumulatedTime) {
-                simulationTimeAcumulator = maxAccumulatedTime;
+            if (simulationTimeAculator > maxAccumulatedTime) {
+                simulationTimeAculator = maxAccumulatedTime;
             }
 
             // Run simulation multiple times between renders
-            while (simulationTimeAcumulator >= simulationTimeStep) {
+            while (simulationTimeAculator >= simulationTimeStep) {
                 update(simulationTimeStep);
-                simulationTimeAcumulator -= simulationTimeStep;
+                simulationTimeAculator -= simulationTimeStep;
             }
         }
         else if (simulationRunning && simulationTimeStep <= 0.0f) {
@@ -670,40 +684,56 @@ void HelloTriangleApplication::drawFrame() {
         {
             if (ImGui::MenuItem("Clear Colour Scenario"))
             {
+				_selectedScenario.OnUnload();
+                _selectedScenario = _clearScenario;
+				_selectedScenario.OnLoad();
+            }
+            if (ImGui::MenuItem("Angular Displacement"))
+            {
+                _selectedScenario.OnUnload();
+                _selectedScenario = _angularDisplacementScenario;
+                _selectedScenario.OnLoad();
+            }
+            if (ImGui::MenuItem("Angular Velocity"))
+            {
+                _selectedScenario.OnUnload();
+                _selectedScenario = _angularVelocityScenario;
+                _selectedScenario.OnLoad();
+            }
+			ImGui::EndMenu();
+        }
+        _selectedScenario.ImGuiMain();
 
-            }
-			ImGui::EndMenu();
-        }
-        if (ImGui::BeginMenu("Colour"))
-        {
-			ImGui::ColorPicker4("Clear Colour", (float*)&uiClearColour);
-			ImGui::EndMenu();
-        }
-        if (ImGui::BeginMenu("Camera"))
-        {
-			ImGui::EndMenu();
-        }
-        if (ImGui::BeginMenu("Material"))
-        {
-			ImGui::EndMenu();
-        }
-        if (ImGui::BeginMenu("Simulation"))
-        {
-            if (ImGui::Button(simulationRunning ? "Stop" : "Start"))
-            {
-				simulationRunning = !simulationRunning;
-            }
-			ImGui::SameLine();
-			if(ImGui::Button("Step Forward"))
-            {
-                if(simulationTimeStep > 0.0f)
-                {
-                    update(simulationTimeStep);
-				}
-            }
-			ImGui::InputFloat("timestep", &simulationTimeStep);
-            ImGui::EndMenu();
-        }
+   //     if (ImGui::BeginMenu("Colour"))
+   //     {
+			//ImGui::ColorPicker4("Clear Colour", (float*)&uiClearColour);
+			//ImGui::EndMenu();
+   //     }
+   //     if (ImGui::BeginMenu("Camera"))
+   //     {
+			//ImGui::EndMenu();
+   //     }
+   //     if (ImGui::BeginMenu("Material"))
+   //     {
+			//ImGui::EndMenu();
+   //     }
+   //     if (ImGui::BeginMenu("Simulation"))
+   //     {
+   //         if (ImGui::Button(simulationRunning ? "Stop" : "Start"))
+   //         {
+			//	simulationRunning = !simulationRunning;
+   //         }
+			//ImGui::SameLine();
+			//if(ImGui::Button("Step Forward"))
+   //         {
+   //             if(simulationTimeStep > 0.0f)
+   //             {
+   //                 update(simulationTimeStep);
+			//	}
+   //         }
+			//ImGui::InputFloat("timestep", &simulationTimeStep);
+   //         ImGui::EndMenu();
+   //     }
 
 		ImGui::EndMainMenuBar();
     }
@@ -792,7 +822,6 @@ void HelloTriangleApplication::recreateSwapChain() {
     _vulkanContext.createDescriptorPool(poolInfo);
     createDescriptorPool();
     createDescriptorSets();
-	vkDestroyDescriptorPool(_vulkanContext.getDevice(), imguiDescriptorPool, nullptr);
 
 	cleanupImGui();
 	initImGui();
@@ -874,12 +903,6 @@ void HelloTriangleApplication::recordCommandBuffer(VkCommandBuffer commandBuffer
         0, 1, &descriptorSets[currentFrame],
         0, nullptr);
 
-    VkBuffer vertexBuffers[] = { vertexBuffer };
-    VkDeviceSize offsets[] = { 0 };
-    vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-    vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
-
-    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 	_sphere.draw(commandBuffer, _pipelineManager.getPipeline("Pipeline"), _pipelineManager.getPipelineLayout(), currentFrame);
 
     // Render ImGui inside the same render pass
@@ -904,10 +927,6 @@ void HelloTriangleApplication::updateUniformBuffer(uint32_t currentImage) {
     ubo.proj = currentCamera.getProjectionMatrix();
     ubo.proj[1][1] *= -1;
 
-    // Update the center cube
-    memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
-
-    // Fix 1: Properly update the lighting info so the sphere isn't pitch black
     LightingUBO lightUBO{};
     lightUBO.lightCount = 1;
     lightUBO.lights[0].type = static_cast<uint32_t>(LightType::Directional);
@@ -918,11 +937,9 @@ void HelloTriangleApplication::updateUniformBuffer(uint32_t currentImage) {
     lightUBO.viewPosWorld = glm::vec3(0.0f, 0.0f, 2.0f);
     lightUBO.shininess = 32.0f;
 
-    // Copy the lighting data to the GPU so the sphere shaders can catch it
     memcpy(lightingUniformBuffersMapped[currentImage], &lightUBO, sizeof(lightUBO));
 
-    // Fix 2: Translate the sphere along the X-axis so it isn't trapped perfectly inside the (-1, 1) cube!
-    glm::mat4 sphereModel = glm::translate(glm::mat4(1.0f), glm::vec3(2.5f, 0.0f, 0.0f)) * ubo.model;
+    glm::mat4 sphereModel = ubo.model * glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));
     _sphere.updateUniformBuffer(currentImage, sphereModel, ubo.view, ubo.proj);
 }
 

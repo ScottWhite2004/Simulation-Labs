@@ -144,11 +144,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="AngularDisplacement.h" />
+    <ClInclude Include="AngularVelocity.h" />
     <ClInclude Include="Application.h" />
     <ClInclude Include="BallMoveScenario.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="CameraManager.h" />
     <ClInclude Include="Capsule.h" />
+    <ClInclude Include="ClearScenario.h" />
     <ClInclude Include="Cube.h" />
     <ClInclude Include="Cylinder.h" />
     <ClInclude Include="GraphicsPipelineBuilder.h" />
@@ -173,11 +176,14 @@
     <ClInclude Include="WindowManager.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AngularDisplacement.cpp" />
+    <ClCompile Include="AngularVelocity.cpp" />
     <ClCompile Include="Application.cpp" />
     <ClCompile Include="BallMoveScenario.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="CameraManager.cpp" />
     <ClCompile Include="Capsule.cpp" />
+    <ClCompile Include="ClearScenario.cpp" />
     <ClCompile Include="Cube.cpp" />
     <ClCompile Include="Cylinder.cpp" />
     <ClCompile Include="GraphicsPipelineBuilder.cpp" />
