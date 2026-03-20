@@ -144,7 +144,10 @@
     <ClInclude Include="pch.h" />
     <ClInclude Include="PhysicsObject.h" />
     <ClInclude Include="Plane.h" />
+    <ClInclude Include="RigidBody.h" />
+    <ClInclude Include="SoftBody.h" />
     <ClInclude Include="SphereCollider.h" />
+    <ClInclude Include="Transform.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Collider.cpp" />
@@ -157,8 +160,11 @@
     </ClCompile>
     <ClCompile Include="PhysicsObject.cpp" />
     <ClCompile Include="Plane.cpp" />
+    <ClCompile Include="RigidBody.cpp" />
     <ClCompile Include="SimulationStaticLib.cpp" />
+    <ClCompile Include="SoftBody.cpp" />
     <ClCompile Include="SphereCollider.cpp" />
+    <ClCompile Include="Transform.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
