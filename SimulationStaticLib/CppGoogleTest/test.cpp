@@ -907,6 +907,151 @@ TEST(AngularVelocity, 90DegreesXYZAxis_2Seconds)
 	EXPECT_NEAR(q.z, 0.4082f, 0.001f);
 }
 
+static void ExpectVec3Near(const glm::vec3& actual, const glm::vec3& expected, float tolerance = 0.001f)
+{
+	EXPECT_NEAR(actual.x, expected.x, tolerance);
+	EXPECT_NEAR(actual.y, expected.y, tolerance);
+	EXPECT_NEAR(actual.z, expected.z, tolerance);
+}
+
+TEST(TorqueAccumulation, MultipleTorquesInSingleStep_AccumulateIntoAngularVelocity)
+{
+	PhysicsObject obj;
+	obj.SetOrientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
+	obj.SetAngularVelocity(glm::vec3(0.0f, 0.0f, 0.0f));
+
+	// Two torques that should add to +90 deg/s around Z.
+	obj.addTorque(glm::vec3(0.0f, 0.0f, glm::radians(30.0f)));
+	obj.addTorque(glm::vec3(0.0f, 0.0f, glm::radians(60.0f)));
+
+	obj.IntegrateEuler(1.0f);
+
+	// Expected angular velocity after one second: +90 deg/s around Z.
+	ExpectVec3Near(obj.getAngularVel(), glm::vec3(0.0f, 0.0f, glm::radians(90.0f)));
+
+	// Expected orientation after one second at +90 deg about Z.
+	glm::quat q = obj.getOrientation();
+	EXPECT_NEAR(q.w, 0.7071f, 0.001f);
+	EXPECT_NEAR(q.x, 0.0f, 0.001f);
+	EXPECT_NEAR(q.y, 0.0f, 0.001f);
+	EXPECT_NEAR(q.z, 0.7071f, 0.001f);
+}
+
+TEST(TorqueAccumulation, OpposingTorquesInSingleStep_CancelOut)
+{
+	PhysicsObject obj;
+	obj.SetOrientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
+	obj.SetAngularVelocity(glm::vec3(0.0f, 0.0f, 0.0f));
+
+	obj.addTorque(glm::vec3(0.0f, 0.0f, glm::radians(45.0f)));
+	obj.addTorque(glm::vec3(0.0f, 0.0f, glm::radians(-45.0f)));
+
+	obj.IntegrateEuler(1.0f);
+
+	// Net torque should be zero.
+	ExpectVec3Near(obj.getAngularVel(), glm::vec3(0.0f, 0.0f, 0.0f));
+
+	glm::quat q = obj.getOrientation();
+	EXPECT_NEAR(q.w, 1.0f, 0.001f);
+	EXPECT_NEAR(q.x, 0.0f, 0.001f);
+	EXPECT_NEAR(q.y, 0.0f, 0.001f);
+	EXPECT_NEAR(q.z, 0.0f, 0.001f);
+}
+
+TEST(AngularVelocityAccumulation, RepeatedEqualTorqueAcrossSteps_AccumulatesAngularVelocity)
+{
+	PhysicsObject obj;
+	obj.SetOrientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
+	obj.SetAngularVelocity(glm::vec3(0.0f, 0.0f, 0.0f));
+
+	// Step 1: add +90 deg/s torque-equivalent and integrate for 1s.
+	obj.addTorque(glm::vec3(0.0f, 0.0f, glm::radians(90.0f)));
+	obj.IntegrateEuler(1.0f);
+
+	// Step 2: apply the same torque again and integrate for 1s.
+	obj.addTorque(glm::vec3(0.0f, 0.0f, glm::radians(90.0f)));
+	obj.IntegrateEuler(1.0f);
+
+	// Angular velocity should have accumulated to +180 deg/s about Z.
+	ExpectVec3Near(obj.getAngularVel(), glm::vec3(0.0f, 0.0f, glm::radians(180.0f)));
+}
+
+TEST(ForceAtPoint, ForceThroughCentreOfMass_ChangesLinearVelocityOnly)
+{
+	PhysicsObject obj = CreateSphereBody(
+		glm::vec3(0.0f, 0.0f, 0.0f),
+		glm::vec3(0.0f, 0.0f, 0.0f),
+		1.0f,
+		2.0f);
+
+	obj.SetAngularVelocity(glm::vec3(0.0f, 0.0f, 0.0f));
+	obj.addForceAtPoint(glm::vec3(10.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f));
+	obj.IntegrateEuler(1.0f);
+
+	EXPECT_GT(obj.getVel().x, 0.0f);
+	EXPECT_NEAR(obj.getAngularVel().x, 0.0f, 0.001f);
+	EXPECT_NEAR(obj.getAngularVel().y, 0.0f, 0.001f);
+	EXPECT_NEAR(obj.getAngularVel().z, 0.0f, 0.001f);
+}
+
+TEST(ForceAtPoint, ForceOffCentre_ChangesLinearAndAngularVelocity)
+{
+	PhysicsObject obj = CreateSphereBody(
+		glm::vec3(0.0f, 0.0f, 0.0f),
+		glm::vec3(0.0f, 0.0f, 0.0f),
+		1.0f,
+		2.0f);
+
+	obj.SetAngularVelocity(glm::vec3(0.0f, 0.0f, 0.0f));
+	obj.addForceAtPoint(glm::vec3(10.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	obj.IntegrateEuler(1.0f);
+
+	EXPECT_GT(obj.getVel().x, 0.0f);
+	EXPECT_GT(glm::length(obj.getAngularVel()), 0.0001f);
+}
+
+TEST(ForceAtPoint, EqualOppositeForcesAtDifferentPoints_CreatePureTorque)
+{
+	PhysicsObject obj = CreateSphereBody(
+		glm::vec3(0.0f, 0.0f, 0.0f),
+		glm::vec3(0.0f, 0.0f, 0.0f),
+		1.0f,
+		2.0f);
+
+	obj.SetAngularVelocity(glm::vec3(0.0f, 0.0f, 0.0f));
+
+	// Net force = 0, net torque != 0
+	obj.addForceAtPoint(glm::vec3(10.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	obj.addForceAtPoint(glm::vec3(-10.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f));
+	obj.IntegrateEuler(1.0f);
+
+	EXPECT_NEAR(obj.getVel().x, 0.0f, 0.001f);
+	EXPECT_NEAR(obj.getVel().y, 0.0f, 0.001f);
+	EXPECT_NEAR(obj.getVel().z, 0.0f, 0.001f);
+	EXPECT_GT(glm::length(obj.getAngularVel()), 0.0001f);
+}
+
+TEST(ForceAtPoint, SameDirectionForcesAtMirroredPoints_CreatePureTranslation)
+{
+	PhysicsObject obj = CreateSphereBody(
+		glm::vec3(0.0f, 0.0f, 0.0f),
+		glm::vec3(0.0f, 0.0f, 0.0f),
+		1.0f,
+		2.0f);
+
+	obj.SetAngularVelocity(glm::vec3(0.0f, 0.0f, 0.0f));
+
+	// Net force != 0, torques cancel
+	obj.addForceAtPoint(glm::vec3(10.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	obj.addForceAtPoint(glm::vec3(10.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f));
+	obj.IntegrateEuler(1.0f);
+
+	EXPECT_GT(obj.getVel().x, 0.0f);
+	EXPECT_NEAR(obj.getAngularVel().x, 0.0f, 0.001f);
+	EXPECT_NEAR(obj.getAngularVel().y, 0.0f, 0.001f);
+	EXPECT_NEAR(obj.getAngularVel().z, 0.0f, 0.001f);
+}
+
 
 
 

@@ -9,18 +9,22 @@ PhysicsObject::~PhysicsObject()
 
 void PhysicsObject::IntegrateEuler(float seconds)
 {
-	glm::vec3 acceleration = _gravity * _inverseMass; // Assuming only gravity for this scenario
+	glm::vec3 linearAcceleration = (_gravity + _accumulatedForces) * _inverseMass;
+	glm::vec3 angularAcceleration = _accumulatingTorque;
 	_position += _velocity * seconds;
-	_velocity += acceleration * seconds;
+	_velocity += linearAcceleration * seconds;
 
+	_angularVelocity += angularAcceleration * seconds;
 	if (glm::length(_angularVelocity) > 0.0001f)
 	{
 		float angle = glm::length(_angularVelocity) * seconds;
 		glm::vec3 axis = glm::normalize(_angularVelocity);
 		addAngularDisplacement(axis, angle);
+		_orientation = glm::normalize(_orientation);
 	}
 
 	_sphereCollider.SetPosition(_position);
+	clearForces();
 }
 
 void PhysicsObject::IntegrateEuler(float seconds, PhysicsObject& otherBody)
@@ -43,17 +47,23 @@ void PhysicsObject::IntegrateEuler(float seconds, const Plane& staticPlane)
 
 void PhysicsObject::IntegrateSemiImplicitEuler(float seconds)
 {
-	glm::vec3 acceleration = _gravity * _inverseMass; // Assuming only gravity for this scenario
-	_velocity += acceleration * seconds;
+	const glm::vec3 linearAcceleration = (_gravity + _accumulatedForces) * _inverseMass;
+	const glm::vec3 angularAcceleration = _accumulatingTorque; // Assuming unit inertia for simplicity
+										
+	_velocity += linearAcceleration * seconds;
 	_position += _velocity * seconds;
 
+
+	_angularVelocity += angularAcceleration * seconds;
 	if (glm::length(_angularVelocity) > 0.0001f)
 	{
 		float angle = glm::length(_angularVelocity) * seconds;
 		glm::vec3 axis = glm::normalize(_angularVelocity);
 		addAngularDisplacement(axis, angle);
+		_orientation = glm::normalize(_orientation);
 	}
 	_sphereCollider.SetPosition(_position);
+	clearForces();
 }
 
 void PhysicsObject::IntegrateSemiImplicitEuler(float seconds, PhysicsObject& otherBody)
@@ -111,4 +121,12 @@ void PhysicsObject::addAngularDisplacement(const glm::vec3& axis, const float& r
 	float w = normalizedAxis.z * glm::sin(radians / 2.0f);
 	glm::quat angularDisplacement = glm::quat(x, y, z, w);
 	addAngularDisplacement(angularDisplacement);
+}
+
+void PhysicsObject::addForceAtPoint(const glm::vec3& force, const glm::vec3& point)
+{
+	_accumulatedForces += force;
+	glm::vec3 r = point - _position;
+	glm::vec3 torque = glm::cross(r, force);
+	addTorque(torque);
 }
