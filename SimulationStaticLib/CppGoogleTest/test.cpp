@@ -1052,6 +1052,312 @@ TEST(ForceAtPoint, SameDirectionForcesAtMirroredPoints_CreatePureTranslation)
 	EXPECT_NEAR(obj.getAngularVel().z, 0.0f, 0.001f);
 }
 
+static float CalculateSphereInertia(float mass, float radius)
+{
+	return (2.0f / 5.0f) * mass * radius * radius;
+}
+
+TEST(RotationalInertia, EqualTorque_DoubleMass_HalfAngularAcceleration)
+{
+	// For a sphere: I = (2/5) * m * r²
+	// If we keep radius constant and double mass, inertia doubles
+	// Angular acceleration ? = ? / I, so doubling I halves ?
+
+	const float radius = 1.0f;
+	const float mass1 = 1.0f;
+	const float mass2 = 2.0f;
+	const glm::vec3 torque(0.0f, 0.0f, glm::radians(90.0f));
+
+	PhysicsObject obj1 = CreateSphereBody(glm::vec3(0.0f), glm::vec3(0.0f), radius, mass1);
+	PhysicsObject obj2 = CreateSphereBody(glm::vec3(0.0f), glm::vec3(0.0f), radius, mass2);
+
+	obj1.SetAngularVelocity(glm::vec3(0.0f));
+	obj2.SetAngularVelocity(glm::vec3(0.0f));
+
+	// Apply same torque to both
+	obj1.addTorque(torque);
+	obj2.addTorque(torque);
+
+	// Integrate for 1 second
+	obj1.IntegrateEuler(1.0f);
+	obj2.IntegrateEuler(1.0f);
+
+	// With proper inertia implementation:
+	// obj1 should have 2x the angular velocity of obj2
+	float I1 = CalculateSphereInertia(mass1, radius);
+	float I2 = CalculateSphereInertia(mass2, radius);
+
+	float expectedRatio = I2 / I1; // Should be 2.0
+
+	float angVel1 = glm::length(obj1.getAngularVel());
+	float angVel2 = glm::length(obj2.getAngularVel());
+
+	// Note: This test will currently fail because PhysicsObject uses unit inertia
+	// When inertia is properly implemented, uncomment these assertions:
+	 EXPECT_FLOAT_EQ(angVel1 / angVel2, expectedRatio);
+
+	// For now, verify the physics expectation:
+	EXPECT_FLOAT_EQ(expectedRatio, 2.0f);
+}
+
+TEST(RotationalInertia, DoubleTorque_DoubleMass_SameAngularVelocity)
+{
+	// If we double both mass and torque, angular acceleration stays the same
+	// ? = ? / I, so (2?) / (2I) = ? / I
+
+	const float radius = 1.0f;
+	const float mass1 = 1.0f;
+	const float mass2 = 2.0f;
+	const glm::vec3 torque1(0.0f, 0.0f, glm::radians(45.0f));
+	const glm::vec3 torque2 = torque1 * 2.0f;
+
+	PhysicsObject obj1 = CreateSphereBody(glm::vec3(0.0f), glm::vec3(0.0f), radius, mass1);
+	PhysicsObject obj2 = CreateSphereBody(glm::vec3(0.0f), glm::vec3(0.0f), radius, mass2);
+
+	obj1.SetAngularVelocity(glm::vec3(0.0f));
+	obj2.SetAngularVelocity(glm::vec3(0.0f));
+
+	obj1.addTorque(torque1);
+	obj2.addTorque(torque2);
+
+	obj1.IntegrateEuler(1.0f);
+	obj2.IntegrateEuler(1.0f);
+
+	float I1 = CalculateSphereInertia(mass1, radius);
+	float I2 = CalculateSphereInertia(mass2, radius);
+
+	// When properly implemented, these should be equal:
+	 EXPECT_NEAR(glm::length(obj1.getAngularVel()), glm::length(obj2.getAngularVel()), 0.001f);
+
+	// For now, verify the expected inertia relationship:
+	EXPECT_FLOAT_EQ(I2 / I1, 2.0f);
+}
+
+TEST(RotationalInertia, TripleMass_RequiresTripleTorqueForSameAngularAcceleration)
+{
+	const float radius = 1.0f;
+	const float mass1 = 1.0f;
+	const float mass2 = 3.0f;
+	const glm::vec3 baseTorque(0.0f, 0.0f, glm::radians(60.0f));
+
+	PhysicsObject obj1 = CreateSphereBody(glm::vec3(0.0f), glm::vec3(0.0f), radius, mass1);
+	PhysicsObject obj2 = CreateSphereBody(glm::vec3(0.0f), glm::vec3(0.0f), radius, mass2);
+
+	obj1.SetAngularVelocity(glm::vec3(0.0f));
+	obj2.SetAngularVelocity(glm::vec3(0.0f));
+
+	float I1 = CalculateSphereInertia(mass1, radius);
+	float I2 = CalculateSphereInertia(mass2, radius);
+	float inertiaRatio = I2 / I1;
+
+	// Apply torque proportional to inertia to get same angular acceleration
+	obj1.addTorque(baseTorque);
+	obj2.addTorque(baseTorque * inertiaRatio);
+
+	obj1.IntegrateEuler(1.0f);
+	obj2.IntegrateEuler(1.0f);
+
+	// When properly implemented:
+	 EXPECT_NEAR(glm::length(obj1.getAngularVel()), glm::length(obj2.getAngularVel()), 0.001f);
+
+	// Verify expected inertia ratio:
+	EXPECT_FLOAT_EQ(inertiaRatio, 3.0f);
+}
+
+TEST(RotationalInertia, LargerRadius_IncreasesMomentOfInertia)
+{
+	// For sphere: I = (2/5) * m * r²
+	// Doubling radius quadruples inertia (if mass stays same)
+
+	const float mass = 2.0f;
+	const float radius1 = 1.0f;
+	const float radius2 = 2.0f;
+	const glm::vec3 torque(0.0f, 0.0f, glm::radians(90.0f));
+
+	PhysicsObject obj1 = CreateSphereBody(glm::vec3(0.0f), glm::vec3(0.0f), radius1, mass);
+	PhysicsObject obj2 = CreateSphereBody(glm::vec3(0.0f), glm::vec3(0.0f), radius2, mass);
+
+	obj1.SetAngularVelocity(glm::vec3(0.0f));
+	obj2.SetAngularVelocity(glm::vec3(0.0f));
+
+	obj1.addTorque(torque);
+	obj2.addTorque(torque);
+
+	obj1.IntegrateEuler(1.0f);
+	obj2.IntegrateEuler(1.0f);
+
+	float I1 = CalculateSphereInertia(mass, radius1);
+	float I2 = CalculateSphereInertia(mass, radius2);
+
+	// I2 should be 4x I1 (radius squared relationship)
+	EXPECT_FLOAT_EQ(I2 / I1, 4.0f);
+
+	// When properly implemented:
+	// obj1 should have 4x the angular velocity of obj2
+	 EXPECT_NEAR(glm::length(obj1.getAngularVel()) / glm::length(obj2.getAngularVel()), 4.0f, 0.001f);
+}
+
+TEST(RotationalInertia, MultiAxisTorque_SameInertiaAllDirections_Sphere)
+{
+	// For a uniform sphere, moment of inertia is same about all axes through center
+	const float mass = 2.0f;
+	const float radius = 1.0f;
+	const float torqueMagnitude = glm::radians(90.0f);
+
+	PhysicsObject objX = CreateSphereBody(glm::vec3(0.0f), glm::vec3(0.0f), radius, mass);
+	PhysicsObject objY = CreateSphereBody(glm::vec3(0.0f), glm::vec3(0.0f), radius, mass);
+	PhysicsObject objZ = CreateSphereBody(glm::vec3(0.0f), glm::vec3(0.0f), radius, mass);
+
+	objX.SetAngularVelocity(glm::vec3(0.0f));
+	objY.SetAngularVelocity(glm::vec3(0.0f));
+	objZ.SetAngularVelocity(glm::vec3(0.0f));
+
+	objX.addTorque(glm::vec3(torqueMagnitude, 0.0f, 0.0f));
+	objY.addTorque(glm::vec3(0.0f, torqueMagnitude, 0.0f));
+	objZ.addTorque(glm::vec3(0.0f, 0.0f, torqueMagnitude));
+
+	objX.IntegrateEuler(1.0f);
+	objY.IntegrateEuler(1.0f);
+	objZ.IntegrateEuler(1.0f);
+
+	float angVelX = glm::length(objX.getAngularVel());
+	float angVelY = glm::length(objY.getAngularVel());
+	float angVelZ = glm::length(objZ.getAngularVel());
+
+	// For a sphere, all three should produce same angular velocity magnitude
+	// When properly implemented:
+	 EXPECT_NEAR(angVelX, angVelY, 0.001f);
+	 EXPECT_NEAR(angVelY, angVelZ, 0.001f);
+
+	// Verify inertia is same for all axes:
+	float I = CalculateSphereInertia(mass, radius);
+	EXPECT_FLOAT_EQ(I, (2.0f / 5.0f) * mass * radius * radius);
+}
+
+TEST(RotationalInertia, ContinuousTorque_LinearAngularVelocityIncrease)
+{
+	// Constant torque should produce constant angular acceleration
+	// ?(t) = ?? + ?t, where ? = ?/I
+
+	const float mass = 2.0f;
+	const float radius = 1.0f;
+	const glm::vec3 constantTorque(0.0f, 0.0f, glm::radians(30.0f));
+	const float dt = 0.1f;
+	const int steps = 10;
+
+	PhysicsObject obj = CreateSphereBody(glm::vec3(0.0f), glm::vec3(0.0f), radius, mass);
+	obj.SetAngularVelocity(glm::vec3(0.0f));
+
+	float I = CalculateSphereInertia(mass, radius);
+	float expectedAlpha = glm::length(constantTorque) / I;
+
+	std::vector<float> angularVelocities;
+
+	for (int i = 0; i < steps; ++i)
+	{
+		obj.addTorque(constantTorque);
+		obj.IntegrateEuler(dt);
+		angularVelocities.push_back(glm::length(obj.getAngularVel()));
+	}
+
+	// When properly implemented, angular velocity should increase linearly
+	// For now, just verify we're collecting data correctly:
+	EXPECT_EQ(angularVelocities.size(), steps);
+	EXPECT_GT(angularVelocities.back(), angularVelocities.front());
+
+	// When inertia is implemented, uncomment to verify linear increase:
+	 for (size_t i = 1; i < angularVelocities.size(); ++i)
+	 {
+	     float expected = expectedAlpha * dt * (i + 1);
+	     EXPECT_NEAR(angularVelocities[i], expected, 0.01f);
+	 }
+}
+
+TEST(RotationalInertia, ZeroMass_InfiniteInertia_NoAngularAcceleration)
+{
+	// Objects with zero mass (infinite inertia) should not accelerate rotationally
+	const float mass = 0.0f;
+	const float radius = 1.0f;
+	const glm::vec3 torque(0.0f, 0.0f, glm::radians(180.0f));
+
+	PhysicsObject obj = CreateSphereBody(glm::vec3(0.0f), glm::vec3(0.0f), radius, mass);
+	obj.SetAngularVelocity(glm::vec3(0.0f));
+
+	obj.addTorque(torque);
+	obj.IntegrateEuler(1.0f);
+
+	// With zero mass, inverse inertia should be zero, preventing rotation
+	// When properly implemented:
+	 EXPECT_NEAR(glm::length(obj.getAngularVel()), 0.0f, 0.001f);
+
+	// For now verify the object reports zero mass:
+	EXPECT_FLOAT_EQ(obj.getMass(), 0.0f);
+}
+
+TEST(RotationalInertia, TorqueRatioMatchesMassRatio_TwoObjects)
+{
+	// If torque ratio matches mass ratio, angular accelerations should be equal
+	const float radius = 1.0f;
+	const float mass1 = 1.5f;
+	const float mass2 = 4.5f;
+	const float massRatio = mass2 / mass1; // 3.0
+
+	const glm::vec3 torque1(0.0f, 0.0f, glm::radians(50.0f));
+	const glm::vec3 torque2 = torque1 * massRatio;
+
+	PhysicsObject obj1 = CreateSphereBody(glm::vec3(0.0f), glm::vec3(0.0f), radius, mass1);
+	PhysicsObject obj2 = CreateSphereBody(glm::vec3(0.0f), glm::vec3(0.0f), radius, mass2);
+
+	obj1.SetAngularVelocity(glm::vec3(0.0f));
+	obj2.SetAngularVelocity(glm::vec3(0.0f));
+
+	obj1.addTorque(torque1);
+	obj2.addTorque(torque2);
+
+	obj1.IntegrateEuler(1.0f);
+	obj2.IntegrateEuler(1.0f);
+
+	float I1 = CalculateSphereInertia(mass1, radius);
+	float I2 = CalculateSphereInertia(mass2, radius);
+	float inertiaRatio = I2 / I1;
+
+	// Verify mass ratio equals inertia ratio (for same radius)
+	EXPECT_FLOAT_EQ(massRatio, inertiaRatio);
+
+	// When properly implemented, angular velocities should be equal:
+	 EXPECT_NEAR(glm::length(obj1.getAngularVel()), glm::length(obj2.getAngularVel()), 0.001f);
+}
+
+TEST(RotationalInertia, SemiImplicitEuler_SameInertiaRelationship)
+{
+	// Test that inertia relationship holds for semi-implicit Euler integrator too
+	const float radius = 1.0f;
+	const float mass1 = 2.0f;
+	const float mass2 = 6.0f;
+	const glm::vec3 torque(0.0f, 0.0f, glm::radians(120.0f));
+
+	PhysicsObject obj1 = CreateSphereBody(glm::vec3(0.0f), glm::vec3(0.0f), radius, mass1);
+	PhysicsObject obj2 = CreateSphereBody(glm::vec3(0.0f), glm::vec3(0.0f), radius, mass2);
+
+	obj1.SetAngularVelocity(glm::vec3(0.0f));
+	obj2.SetAngularVelocity(glm::vec3(0.0f));
+
+	obj1.addTorque(torque);
+	obj2.addTorque(torque);
+
+	obj1.IntegrateSemiImplicitEuler(1.0f);
+	obj2.IntegrateSemiImplicitEuler(1.0f);
+
+	float I1 = CalculateSphereInertia(mass1, radius);
+	float I2 = CalculateSphereInertia(mass2, radius);
+	float expectedRatio = I2 / I1; // Should be 3.0
+
+	// When properly implemented:
+	 EXPECT_NEAR(glm::length(obj1.getAngularVel()) / glm::length(obj2.getAngularVel()), expectedRatio, 0.001f);
+
+	EXPECT_FLOAT_EQ(expectedRatio, 3.0f);
+}
+
 
 
 

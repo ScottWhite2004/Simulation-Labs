@@ -10,7 +10,7 @@ PhysicsObject::~PhysicsObject()
 void PhysicsObject::IntegrateEuler(float seconds)
 {
 	glm::vec3 linearAcceleration = (_gravity + _accumulatedForces) * _inverseMass;
-	glm::vec3 angularAcceleration = _accumulatingTorque;
+	glm::vec3 angularAcceleration = _accumulatingTorque * _inverseInertia;
 	_position += _velocity * seconds;
 	_velocity += linearAcceleration * seconds;
 
@@ -48,7 +48,7 @@ void PhysicsObject::IntegrateEuler(float seconds, const Plane& staticPlane)
 void PhysicsObject::IntegrateSemiImplicitEuler(float seconds)
 {
 	const glm::vec3 linearAcceleration = (_gravity + _accumulatedForces) * _inverseMass;
-	const glm::vec3 angularAcceleration = _accumulatingTorque; // Assuming unit inertia for simplicity
+	const glm::vec3 angularAcceleration = _accumulatingTorque * _inverseInertia;
 										
 	_velocity += linearAcceleration * seconds;
 	_position += _velocity * seconds;
@@ -129,4 +129,10 @@ void PhysicsObject::addForceAtPoint(const glm::vec3& force, const glm::vec3& poi
 	glm::vec3 r = point - _position;
 	glm::vec3 torque = glm::cross(r, force);
 	addTorque(torque);
+}
+
+void PhysicsObject::calculateSphereInertia(const float& radius)
+{
+	_inertia = (2.0f / 5.0f) * _mass * radius * radius;
+	_inverseInertia = (_inertia > 0.0f) ? 1.0f / _inertia : 0.0f;
 }

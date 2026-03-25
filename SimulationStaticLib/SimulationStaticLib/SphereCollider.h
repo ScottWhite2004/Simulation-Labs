@@ -27,5 +27,7 @@
 
 		bool CollidesWith(const Plane& other) const;
 
+		float GetRadius() const { return _Radius; }
+
 	}; 
 
