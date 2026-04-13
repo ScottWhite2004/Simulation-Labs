@@ -2,9 +2,11 @@ E:\UniTemp\Simulation-Labs\SimulationStaticLib\SimulationStaticLib\Collider.cpp;
 E:\UniTemp\Simulation-Labs\SimulationStaticLib\SimulationStaticLib\Line.cpp;E:\UniTemp\Simulation-Labs\SimulationStaticLib\SimulationStaticLib\x64\Debug\Line.obj
 E:\UniTemp\Simulation-Labs\SimulationStaticLib\SimulationStaticLib\pch.cpp;E:\UniTemp\Simulation-Labs\SimulationStaticLib\SimulationStaticLib\x64\Debug\pch.obj
 E:\UniTemp\Simulation-Labs\SimulationStaticLib\SimulationStaticLib\PhysicsObject.cpp;E:\UniTemp\Simulation-Labs\SimulationStaticLib\SimulationStaticLib\x64\Debug\PhysicsObject.obj
+E:\UniTemp\Simulation-Labs\SimulationStaticLib\SimulationStaticLib\PhysicsWorld.cpp;E:\UniTemp\Simulation-Labs\SimulationStaticLib\SimulationStaticLib\x64\Debug\PhysicsWorld.obj
 E:\UniTemp\Simulation-Labs\SimulationStaticLib\SimulationStaticLib\Plane.cpp;E:\UniTemp\Simulation-Labs\SimulationStaticLib\SimulationStaticLib\x64\Debug\Plane.obj
 E:\UniTemp\Simulation-Labs\SimulationStaticLib\SimulationStaticLib\RigidBody.cpp;E:\UniTemp\Simulation-Labs\SimulationStaticLib\SimulationStaticLib\x64\Debug\RigidBody.obj
 E:\UniTemp\Simulation-Labs\SimulationStaticLib\SimulationStaticLib\SimulationStaticLib.cpp;E:\UniTemp\Simulation-Labs\SimulationStaticLib\SimulationStaticLib\x64\Debug\SimulationStaticLib.obj
 E:\UniTemp\Simulation-Labs\SimulationStaticLib\SimulationStaticLib\SoftBody.cpp;E:\UniTemp\Simulation-Labs\SimulationStaticLib\SimulationStaticLib\x64\Debug\SoftBody.obj
 E:\UniTemp\Simulation-Labs\SimulationStaticLib\SimulationStaticLib\SphereCollider.cpp;E:\UniTemp\Simulation-Labs\SimulationStaticLib\SimulationStaticLib\x64\Debug\SphereCollider.obj
+E:\UniTemp\Simulation-Labs\SimulationStaticLib\SimulationStaticLib\Spring.cpp;E:\UniTemp\Simulation-Labs\SimulationStaticLib\SimulationStaticLib\x64\Debug\Spring.obj
 E:\UniTemp\Simulation-Labs\SimulationStaticLib\SimulationStaticLib\Transform.cpp;E:\UniTemp\Simulation-Labs\SimulationStaticLib\SimulationStaticLib\x64\Debug\Transform.obj

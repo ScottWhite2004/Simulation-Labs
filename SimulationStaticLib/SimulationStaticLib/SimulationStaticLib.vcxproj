@@ -143,10 +143,12 @@
     <ClInclude Include="Line.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="PhysicsObject.h" />
+    <ClInclude Include="PhysicsWorld.h" />
     <ClInclude Include="Plane.h" />
     <ClInclude Include="RigidBody.h" />
     <ClInclude Include="SoftBody.h" />
     <ClInclude Include="SphereCollider.h" />
+    <ClInclude Include="Spring.h" />
     <ClInclude Include="Transform.h" />
   </ItemGroup>
   <ItemGroup>
@@ -159,11 +161,13 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="PhysicsObject.cpp" />
+    <ClCompile Include="PhysicsWorld.cpp" />
     <ClCompile Include="Plane.cpp" />
     <ClCompile Include="RigidBody.cpp" />
     <ClCompile Include="SimulationStaticLib.cpp" />
     <ClCompile Include="SoftBody.cpp" />
     <ClCompile Include="SphereCollider.cpp" />
+    <ClCompile Include="Spring.cpp" />
     <ClCompile Include="Transform.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

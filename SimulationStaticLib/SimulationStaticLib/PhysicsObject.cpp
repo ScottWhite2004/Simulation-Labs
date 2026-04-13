@@ -9,6 +9,8 @@ PhysicsObject::~PhysicsObject()
 
 void PhysicsObject::IntegrateEuler(float seconds)
 {
+	if(_isStatic)
+		return;
 	glm::vec3 linearAcceleration = (_gravity + _accumulatedForces) * _inverseMass;
 	glm::vec3 angularAcceleration = _accumulatingTorque * _inverseInertia;
 	_position += _velocity * seconds;
@@ -47,6 +49,8 @@ void PhysicsObject::IntegrateEuler(float seconds, const Plane& staticPlane)
 
 void PhysicsObject::IntegrateSemiImplicitEuler(float seconds)
 {
+	if(_isStatic)
+		return;
 	const glm::vec3 linearAcceleration = (_gravity + _accumulatedForces) * _inverseMass;
 	const glm::vec3 angularAcceleration = _accumulatingTorque * _inverseInertia;
 										

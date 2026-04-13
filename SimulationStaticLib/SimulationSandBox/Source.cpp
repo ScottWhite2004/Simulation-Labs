@@ -48,6 +48,7 @@
 #include "ClearScenario.h"
 #include "AngularDisplacement.h"
 #include "AngularVelocity.h"
+#include "Spring.h"
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
 
@@ -139,10 +140,15 @@ private:
     // --- ImGui ---
 	VkDescriptorPool imguiDescriptorPool = VK_NULL_HANDLE;
 
-    //Shapes
-	Sphere _sphere;
+    //Cloth Settings
+	std::vector<Sphere> _clothParticles;
+	std::vector<Spring> _clothSprings;
+	std::vector<uint32_t> _clothIndices;
+	std::vector<Vertex> _clothVertices;
 
 
+    //World Forces
+	glm::vec3 gravity = glm::vec3(0.0f, -9.81f, 0.0f);
 
 
     // --- Main Flow ---
@@ -175,7 +181,13 @@ private:
     void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
     void updateUniformBuffer(uint32_t currentImage);
 
+    //Cloth Creation
 
+	void createCloth(int width, int height, float spacing, const Material& material);
+
+    uint32_t getClothParticleIndex(int x, int y, int width) {
+        return y * width + x;
+	}
 
 
     // --- Helper Functions ---
@@ -295,11 +307,9 @@ void HelloTriangleApplication::initVulkan() {
 	_swapChainManager.createFramebuffers(_renderPassManager.getRenderPass(),depthImageView);
 	_syncManager.initialize(&_vulkanContext, &_swapChainManager, MAX_FRAMES_IN_FLIGHT);
 	Material defaultMaterial = Material(glm::vec4(1.0f), 0.0f, 1.0f, _texManager.getTexture("default"));
-	_sphere = Sphere(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f), glm::vec3(0.0f), SphereCollider(glm::vec3(0.0f,0.0f,0.0f),1.0f), 1.0f, defaultMaterial, 1.0f);
-	_sphere.create();
+	createCloth(30, 30, 0.1f, defaultMaterial);
     createUniformBuffers();
     createDescriptorPool();
-    _sphere.SetAngularVelocity(glm::vec3(0.0f, 0.1f, 0.0f));
 
     std::vector<VkDescriptorBufferInfo> lightingBufferInfos(MAX_FRAMES_IN_FLIGHT);
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
@@ -308,12 +318,96 @@ void HelloTriangleApplication::initVulkan() {
         lightingBufferInfos[i].range = sizeof(LightingUBO);
     }
 
-    _sphere.upload(_vulkanContext, MAX_FRAMES_IN_FLIGHT, defaultMaterial.getTextureImageView(), defaultMaterial.getTextureSampler(), lightingBufferInfos);
+    for(auto & particle : _clothParticles) {
+        particle.upload(_vulkanContext, MAX_FRAMES_IN_FLIGHT, defaultMaterial.getTextureImageView(), defaultMaterial.getTextureSampler(), lightingBufferInfos);
+	}
     createDescriptorSets();
     createCommandBuffers();
     initImGui();
 
 	_selectedScenario.OnLoad();
+}
+
+
+void HelloTriangleApplication::createCloth(int width, int height, float spacing, const Material& material)
+{
+    if (width <= 1 || height <= 1 || spacing <= 0.0f) {
+        return;
+    }
+
+    for (auto& particle : _clothParticles) {
+        particle.destroy(_vulkanContext);
+    }
+
+    _clothParticles.clear();
+    _clothSprings.clear();
+
+    const size_t particleCount = static_cast<size_t>(width) * static_cast<size_t>(height);
+
+    const size_t structuralCount =
+        static_cast<size_t>(width - 1) * static_cast<size_t>(height) +
+        static_cast<size_t>(width) * static_cast<size_t>(height - 1);
+
+    const size_t shearCount =
+        2ull * static_cast<size_t>(width - 1) * static_cast<size_t>(height - 1);
+
+    const size_t bendCount =
+        static_cast<size_t>(std::max(0, width - 2)) * static_cast<size_t>(height) +
+        static_cast<size_t>(width) * static_cast<size_t>(std::max(0, height - 2));
+
+    _clothParticles.reserve(particleCount);
+    _clothSprings.reserve(structuralCount + shearCount + bendCount);
+
+    const glm::vec3 origin(
+        -0.5f * static_cast<float>(width - 1) * spacing,
+        4.0f,
+        0.0f);
+
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            const glm::vec3 p = origin + glm::vec3(x * spacing, -y * spacing, 0.0f);
+
+            Sphere particle(
+                p,
+                glm::vec3(0.0f),
+                glm::vec3(0.0f),
+                SphereCollider(glm::vec3(0.0f), 0.07f),
+                0.15f,
+                material,
+                0.07f);
+
+            particle.create();
+
+            if ((y == 0 && x == 0) || (y == 0 && x == width - 1)) {
+                particle.SetStatic(true);
+            }
+
+            _clothParticles.emplace_back(std::move(particle));
+        }
+    }
+
+    auto addSpring = [&](uint32_t a, uint32_t b, float k, float d) {
+        const float rest = glm::distance(_clothParticles[a].getPos(), _clothParticles[b].getPos());
+        _clothSprings.emplace_back(&_clothParticles[a], &_clothParticles[b], rest, k, d);
+        };
+
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            const uint32_t i = getClothParticleIndex(x, y, width);
+
+            // Structural
+            if (x + 1 < width)  addSpring(i, getClothParticleIndex(x + 1, y, width), 90.0f, 1.2f);
+            if (y + 1 < height) addSpring(i, getClothParticleIndex(x, y + 1, width), 90.0f, 1.2f);
+
+            // Shear
+            if (x + 1 < width && y + 1 < height) addSpring(i, getClothParticleIndex(x + 1, y + 1, width), 70.0f, 1.0f);
+            if (x - 1 >= 0 && y + 1 < height)    addSpring(i, getClothParticleIndex(x - 1, y + 1, width), 70.0f, 1.0f);
+
+            // Bend
+            if (x + 2 < width)  addSpring(i, getClothParticleIndex(x + 2, y, width), 50.0f, 0.8f);
+            if (y + 2 < height) addSpring(i, getClothParticleIndex(x, y + 2, width), 50.0f, 0.8f);
+        }
+    }
 }
 
 void HelloTriangleApplication::initImGui() {
@@ -379,7 +473,16 @@ void HelloTriangleApplication::cleanupImGui() {
 void HelloTriangleApplication::update(float seconds)
 {
     _selectedScenario.OnUpdate(seconds);
-	_sphere.IntegrateEuler(seconds);
+    for (auto& spring : _clothSprings)
+    {
+		spring.update();
+    }
+
+    for (auto& particle : _clothParticles)
+    {
+        particle.addForce(gravity * particle.getMass()); // Apply gravity to each cloth particle
+        particle.IntegrateSemiImplicitEuler(seconds);
+	}
 }
 
 void HelloTriangleApplication::updateCameraControls(float dt)
@@ -473,6 +576,10 @@ void HelloTriangleApplication::cleanup() {
 
 	cleanupImGui();
 
+    for (auto& particle : _clothParticles) {
+		particle.destroy(_vulkanContext);
+	}
+
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         vkDestroyBuffer(_vulkanContext.getDevice(), uniformBuffers[i], nullptr);
         vkFreeMemory(_vulkanContext.getDevice(), uniformBuffersMemory[i], nullptr);
@@ -487,11 +594,6 @@ void HelloTriangleApplication::cleanup() {
     _syncManager.cleanup();
 
 	vkDestroyCommandPool(_vulkanContext.getDevice(), _vulkanContext.getCommandPool(), nullptr);
-
-    vkDestroyDevice(_vulkanContext.getDevice(), nullptr);
-
-    vkDestroySurfaceKHR(_vulkanContext.getInstance(), _vulkanContext.getSurface(), nullptr);
-    vkDestroyInstance(_vulkanContext.getInstance(), nullptr);
 	_windowManager.destroyWindow();
 }
 
@@ -563,10 +665,10 @@ void HelloTriangleApplication::createDescriptorPool() {
     // We need enough Uniform Buffers and Samplers for our scene objects
     // Bumping limits to comfortably support the triangle and the sphere
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT * 10);
+    poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT * 1000000);
 
     poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT * 10);
+    poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT * 1000000);
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -574,7 +676,7 @@ void HelloTriangleApplication::createDescriptorPool() {
     poolInfo.pPoolSizes = poolSizes.data();
 
     // Give the pool plenty of available sets
-    poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT * 10);
+    poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT * 1000000);
     _vulkanContext.createDescriptorPool(poolInfo);
 }
 
@@ -582,7 +684,7 @@ void HelloTriangleApplication::createDescriptorSets() {
     std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, _vulkanContext.getDescriptorSetLayout());
     VkDescriptorSetAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	allocInfo.descriptorPool = _vulkanContext.getDescriptorPool();
+    allocInfo.descriptorPool = _vulkanContext.getDescriptorPool();
     allocInfo.descriptorSetCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
     allocInfo.pSetLayouts = layouts.data();
 
@@ -591,21 +693,56 @@ void HelloTriangleApplication::createDescriptorSets() {
         throw std::runtime_error("Failed to allocate descriptor sets!");
     }
 
+    Material defaultMaterial = Material(glm::vec4(1.0f), 0.0f, 1.0f, _texManager.getTexture("default"));
+
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        VkDescriptorBufferInfo bufferInfo{};
-        bufferInfo.buffer = uniformBuffers[i];
-        bufferInfo.offset = 0;
-        bufferInfo.range = sizeof(UniformBufferObject);
+        VkDescriptorBufferInfo transformBufferInfo{};
+        transformBufferInfo.buffer = uniformBuffers[i];
+        transformBufferInfo.offset = 0;
+        transformBufferInfo.range = sizeof(UniformBufferObject);
 
-        VkWriteDescriptorSet descriptorWrite{};
-        descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrite.dstSet = descriptorSets[i];
-        descriptorWrite.dstBinding = 0;
-        descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        descriptorWrite.descriptorCount = 1;
-        descriptorWrite.pBufferInfo = &bufferInfo;
+        VkDescriptorImageInfo samplerInfo{};
+        samplerInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        samplerInfo.imageView = defaultMaterial.getTextureImageView();
+        samplerInfo.sampler = defaultMaterial.getTextureSampler();
 
-        vkUpdateDescriptorSets(_vulkanContext.getDevice(), 1, &descriptorWrite, 0, nullptr);
+        VkDescriptorBufferInfo lightingBufferInfo{};
+        lightingBufferInfo.buffer = lightingUniformBuffers[i];
+        lightingBufferInfo.offset = 0;
+        lightingBufferInfo.range = sizeof(LightingUBO);
+
+        std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
+
+        descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[0].dstSet = descriptorSets[i];
+        descriptorWrites[0].dstBinding = 0;
+        descriptorWrites[0].dstArrayElement = 0;
+        descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptorWrites[0].descriptorCount = 1;
+        descriptorWrites[0].pBufferInfo = &transformBufferInfo;
+
+        descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[1].dstSet = descriptorSets[i];
+        descriptorWrites[1].dstBinding = 1;
+        descriptorWrites[1].dstArrayElement = 0;
+        descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptorWrites[1].descriptorCount = 1;
+        descriptorWrites[1].pImageInfo = &samplerInfo;
+
+        descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[2].dstSet = descriptorSets[i];
+        descriptorWrites[2].dstBinding = 2;
+        descriptorWrites[2].dstArrayElement = 0;
+        descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptorWrites[2].descriptorCount = 1;
+        descriptorWrites[2].pBufferInfo = &lightingBufferInfo;
+
+        vkUpdateDescriptorSets(
+            _vulkanContext.getDevice(),
+            static_cast<uint32_t>(descriptorWrites.size()),
+            descriptorWrites.data(),
+            0,
+            nullptr);
     }
 }
 
@@ -710,7 +847,7 @@ void HelloTriangleApplication::drawFrame() {
 			ImGui::InputFloat("Radians", &displacementRadians);
             if (ImGui::Button("Apply Displacement"))
             {
-				_sphere.addAngularDisplacement(displacement,displacementRadians);
+
             }
 			ImGui::EndMenu();
         }
@@ -881,7 +1018,6 @@ void HelloTriangleApplication::recordCommandBuffer(VkCommandBuffer commandBuffer
     scissor.extent = _swapChainManager.getExtent();
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-    // Bind your pipeline and descriptors
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineManager.getPipeline("Pipeline"));
     vkCmdBindDescriptorSets(
         commandBuffer,
@@ -890,7 +1026,10 @@ void HelloTriangleApplication::recordCommandBuffer(VkCommandBuffer commandBuffer
         0, 1, &descriptorSets[currentFrame],
         0, nullptr);
 
-	_sphere.draw(commandBuffer, _pipelineManager.getPipeline("Pipeline"), _pipelineManager.getPipelineLayout(), currentFrame);
+    for(auto & particle : _clothParticles)
+    {
+        particle.draw(commandBuffer, _pipelineManager.getPipeline("Pipeline"), _pipelineManager.getPipelineLayout(), currentFrame);
+	}
 
     // Render ImGui inside the same render pass
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer, VK_NULL_HANDLE);
@@ -926,10 +1065,13 @@ void HelloTriangleApplication::updateUniformBuffer(uint32_t currentImage) {
 
     memcpy(lightingUniformBuffersMapped[currentImage], &lightUBO, sizeof(lightUBO));
 
-	const glm::mat4 translation = glm::translate(glm::mat4(1.0f), _sphere.getPos());
-    const glm::mat4 rotation = glm::mat4_cast(glm::normalize(_sphere.getOrientation()));
-	const glm::mat4 sphereModel = translation * rotation;
-    _sphere.updateUniformBuffer(currentImage, sphereModel, ubo.view, ubo.proj);
+    for(auto & particle : _clothParticles)
+    {
+		const glm::mat4 translation = glm::translate(glm::mat4(1.0f), particle.getPos());
+		const glm::mat4 rotation = glm::mat4_cast(glm::normalize(particle.getOrientation()));
+		const glm::mat4 model = translation * rotation;
+        particle.updateUniformBuffer(currentImage, model, ubo.view, ubo.proj);
+	}
 }
 
 // --- Helper Implementations ---

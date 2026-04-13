@@ -43,6 +43,8 @@ private:
 
 	float _inverseInertia{ 1.0f };
 
+	bool _isStatic{ false };
+
 	void calculateSphereInertia(const float& radius);
 
 public:
@@ -65,6 +67,7 @@ public:
 	void SetVelocity(const glm::vec3& newVelocity) { _velocity = newVelocity; }
 	void SetAngularVelocity(const glm::vec3& angularVelocity) { _angularVelocity = angularVelocity; }
 	void SetMass(float mass) { _mass = mass; _inverseMass = (mass > 0.0f) ? 1.0f / mass : 0.0f; }
+	void SetStatic(bool isStatic) { _isStatic = isStatic; }
 	void addForce(const glm::vec3& force) { _accumulatedForces += force; }
 	void addAngularDisplacement(const glm::quat& displacement) { _orientation *= displacement; }
 	void addAngularDisplacement(const glm::vec3& axis, const float& radians);
