@@ -3,6 +3,7 @@
 #include <glm/gtc/quaternion.hpp>
 #include "Collider.h"
 #include "SphereCollider.h"
+#include "Transform.h"
 class PhysicsObject
 {
 public:
@@ -14,6 +15,8 @@ public:
 
 private:
 	IntegrationMethod _selectedIntegrationMethod{ IntegrationMethod::SemiImplicitEuler };
+
+	Transform _transform;
 	
 	glm::vec3 _position{ 0.0f, 0.0f, 0.0f };
 
@@ -48,7 +51,7 @@ private:
 	void calculateSphereInertia(const float& radius);
 
 public:
-	PhysicsObject(const glm::vec3& position, const glm::quat& orientation, const glm::vec3& velocity, const SphereCollider& sphere, float mass = 1.0f) : _position(position), _orientation(orientation), _velocity(velocity), _angularVelocity(0.0f), _accumulatingTorque(0.0f), _angularAcceleration(0.0f), _sphereCollider(sphere), _accumulatedForces(0.0f), _mass(mass), _inverseMass((mass > 0.0f) ? 1.0f / mass : 0.0f) { calculateSphereInertia(_sphereCollider.GetRadius()); }
+	PhysicsObject(const Transform& transform, const glm::vec3& position, const glm::quat& orientation, const glm::vec3& velocity, const SphereCollider& sphere, float mass = 1.0f) : _transform(transform), _position(position), _orientation(orientation), _velocity(velocity), _angularVelocity(0.0f), _accumulatingTorque(0.0f), _angularAcceleration(0.0f), _sphereCollider(sphere), _accumulatedForces(0.0f), _mass(mass), _inverseMass((mass > 0.0f) ? 1.0f / mass : 0.0f) { calculateSphereInertia(_sphereCollider.GetRadius()); }
 	PhysicsObject();
 	virtual ~PhysicsObject();
 	glm::vec3 getPos() const { return _position; }
