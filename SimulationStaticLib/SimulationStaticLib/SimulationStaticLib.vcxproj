@@ -139,6 +139,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Collider.h" />
+    <ClInclude Include="CollisionEvent.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="Line.h" />
     <ClInclude Include="pch.h" />
@@ -153,6 +154,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Collider.cpp" />
+    <ClCompile Include="CollisionEvent.cpp" />
     <ClCompile Include="Line.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
