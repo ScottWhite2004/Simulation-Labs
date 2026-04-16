@@ -1,5 +1,6 @@
 #pragma once
-class RigidBody
+#include "PhysicsObject.h"
+class RigidBody : public PhysicsObject
 {
 };
 

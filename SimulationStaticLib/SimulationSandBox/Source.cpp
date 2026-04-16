@@ -148,7 +148,7 @@ private:
 
 
     //World Forces
-	glm::vec3 gravity = glm::vec3(0.0f, -9.81f, 0.0f);
+	glm::vec3 gravity = glm::vec3(0.0f, -0.5f, 0.0f);
 
 
     // --- Main Flow ---
@@ -351,12 +351,16 @@ void HelloTriangleApplication::createCloth(int width, int height, float spacing,
     const size_t shearCount =
         2ull * static_cast<size_t>(width - 1) * static_cast<size_t>(height - 1);
 
-    const size_t bendCount =
+    // Axial bend + diagonal bend (flexion)
+    const size_t bendAxialCount =
         static_cast<size_t>(std::max(0, width - 2)) * static_cast<size_t>(height) +
         static_cast<size_t>(width) * static_cast<size_t>(std::max(0, height - 2));
 
+    const size_t bendDiagonalCount =
+        2ull * static_cast<size_t>(std::max(0, width - 2)) * static_cast<size_t>(std::max(0, height - 2));
+
     _clothParticles.reserve(particleCount);
-    _clothSprings.reserve(structuralCount + shearCount + bendCount);
+    _clothSprings.reserve(structuralCount + shearCount + bendAxialCount + bendDiagonalCount);
 
     const glm::vec3 origin(
         -0.5f * static_cast<float>(width - 1) * spacing,
@@ -372,7 +376,7 @@ void HelloTriangleApplication::createCloth(int width, int height, float spacing,
                 glm::vec3(0.0f),
                 glm::vec3(0.0f),
                 SphereCollider(glm::vec3(0.0f), 0.07f),
-                0.15f,
+                0.01f,
                 material,
                 0.07f);
 
@@ -391,21 +395,33 @@ void HelloTriangleApplication::createCloth(int width, int height, float spacing,
         _clothSprings.emplace_back(&_clothParticles[a], &_clothParticles[b], rest, k, d);
         };
 
+    // Tunables
+    const float kStructural = 3.0f;
+    const float dStructural = 1.2f;
+    const float kShear = 2.0f;
+    const float dShear = 1.0f;
+    const float kFlexion = 1.0f; // lower than structural
+    const float dFlexion = 0.7f;
+
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
             const uint32_t i = getClothParticleIndex(x, y, width);
 
             // Structural
-            if (x + 1 < width)  addSpring(i, getClothParticleIndex(x + 1, y, width), 90.0f, 1.2f);
-            if (y + 1 < height) addSpring(i, getClothParticleIndex(x, y + 1, width), 90.0f, 1.2f);
+            if (x + 1 < width)  addSpring(i, getClothParticleIndex(x + 1, y, width), kStructural, dStructural);
+            if (y + 1 < height) addSpring(i, getClothParticleIndex(x, y + 1, width), kStructural, dStructural);
 
             // Shear
-            if (x + 1 < width && y + 1 < height) addSpring(i, getClothParticleIndex(x + 1, y + 1, width), 70.0f, 1.0f);
-            if (x - 1 >= 0 && y + 1 < height)    addSpring(i, getClothParticleIndex(x - 1, y + 1, width), 70.0f, 1.0f);
+            if (x + 1 < width && y + 1 < height) addSpring(i, getClothParticleIndex(x + 1, y + 1, width), kShear, dShear);
+            if (x - 1 >= 0 && y + 1 < height)    addSpring(i, getClothParticleIndex(x - 1, y + 1, width), kShear, dShear);
 
-            // Bend
-            if (x + 2 < width)  addSpring(i, getClothParticleIndex(x + 2, y, width), 50.0f, 0.8f);
-            if (y + 2 < height) addSpring(i, getClothParticleIndex(x, y + 2, width), 50.0f, 0.8f);
+            // Flexion (axial 2-hop)
+            if (x + 2 < width)  addSpring(i, getClothParticleIndex(x + 2, y, width), kFlexion, dFlexion);
+            if (y + 2 < height) addSpring(i, getClothParticleIndex(x, y + 2, width), kFlexion, dFlexion);
+
+            // Flexion (diagonal 2-hop) - improves fold resistance
+            if (x + 2 < width && y + 2 < height) addSpring(i, getClothParticleIndex(x + 2, y + 2, width), kFlexion, dFlexion);
+            if (x - 2 >= 0 && y + 2 < height)    addSpring(i, getClothParticleIndex(x - 2, y + 2, width), kFlexion, dFlexion);
         }
     }
 }

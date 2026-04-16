@@ -1,5 +1,9 @@
 #pragma once
-class SoftBody
+#include "PhysicsObject.h"
+class SoftBody : public PhysicsObject
 {
+
+
+
 };
 
