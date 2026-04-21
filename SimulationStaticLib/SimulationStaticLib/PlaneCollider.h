@@ -3,7 +3,7 @@
 #include "Line.h"
 #include "glm/glm.hpp"
 
-class Plane : public Collider
+class PlaneCollider : public Collider
 {
 
 	glm::vec3 _Normal;
@@ -15,7 +15,9 @@ public:
 
 	float ShortestDistanceToPoint(const glm::vec3& point) const;
 
-	Plane(const glm::vec3& position, const glm::vec3& normal)
+	glm::vec3 calculateLocalInertiaTensor(float mass) const override;
+
+	PlaneCollider(const glm::vec3& position, const glm::vec3& normal)
 		: _Normal(normal)
 	{
 		_Position = position;

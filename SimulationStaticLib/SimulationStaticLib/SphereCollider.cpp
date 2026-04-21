@@ -24,8 +24,14 @@ bool SphereCollider::CollidesWith(const SphereCollider& other) const
 	return distanceSquared <= (radiusSum * radiusSum);
 }
 
-bool SphereCollider::CollidesWith(const Plane& other) const
+bool SphereCollider::CollidesWith(const PlaneCollider& other) const
 {
 	float distance = other.ShortestDistanceToPoint(_Position);
 	return fabs(distance) <= _Radius;
+}
+
+glm::vec3 SphereCollider::calculateLocalInertiaTensor(float mass) const
+{
+	float inertia = (2.0f / 5.0f) * mass * _Radius * _Radius;
+	return glm::vec3(inertia, inertia, inertia);
 }

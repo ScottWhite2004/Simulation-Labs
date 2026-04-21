@@ -93,9 +93,6 @@
     <ClInclude Include="Plane.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="BallMoveScenario.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="ClearScenario.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -207,9 +204,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="stb_image.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="BallMoveScenario.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ClearScenario.cpp">

@@ -147,7 +147,6 @@
     <ClInclude Include="AngularDisplacement.h" />
     <ClInclude Include="AngularVelocity.h" />
     <ClInclude Include="Application.h" />
-    <ClInclude Include="BallMoveScenario.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="CameraManager.h" />
     <ClInclude Include="Capsule.h" />
@@ -179,7 +178,6 @@
     <ClCompile Include="AngularDisplacement.cpp" />
     <ClCompile Include="AngularVelocity.cpp" />
     <ClCompile Include="Application.cpp" />
-    <ClCompile Include="BallMoveScenario.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="CameraManager.cpp" />
     <ClCompile Include="Capsule.cpp" />

@@ -22,7 +22,7 @@ void Spring::calculateForce()
 	glm::vec3 dir = delta / length;
 	float x = length - _restLength; // extension (+) / compression (-)
 
-	glm::vec3 relVel = _objectB->getVel() - _objectA->getVel();
+ glm::vec3 relVel = _objectB->getVel() - _objectA->getVel();
 	float vAlongSpring = glm::dot(relVel, dir);
 
 	float springMag = -_stiffness * x;

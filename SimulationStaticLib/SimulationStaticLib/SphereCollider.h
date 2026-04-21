@@ -1,6 +1,6 @@
 #pragma once
 #include "Collider.h"
-#include "Plane.h"
+#include "PlaneCollider.h"
 #include "Line.h"
 #include "glm/glm.hpp"
 
@@ -23,9 +23,11 @@
 
 		virtual bool Intersects(const Line& line) const override;
 
+		glm::vec3 calculateLocalInertiaTensor(float mass) const override;
+
 		bool CollidesWith(const SphereCollider& other) const;
 
-		bool CollidesWith(const Plane& other) const;
+		bool CollidesWith(const PlaneCollider& other) const;
 
 		float GetRadius() const { return _Radius; }
 

@@ -15,7 +15,7 @@ enum class IntegrationMethod
 class PhysicsWorld
 {
 	glm::vec3 _gravity;
-	std::vector<RigidBody*> _rigidBodies;
+	std::vector<PhysicsObject*> _objects;
 	std::vector<Spring*> _springs;
 	IntegrationMethod _selectedIntegrationMethod{ IntegrationMethod::SemiImplicitEuler };
 	
@@ -25,7 +25,7 @@ class PhysicsWorld
 
 public:
 	PhysicsWorld(const glm::vec3& gravity) : _gravity(gravity) {}
-	void addRigidBody(const RigidBody& body);
+	void addObject(const PhysicsObject& object);
 	void addSpring(const Spring& spring);
 	void step(float deltaTime);
 	void setIntegrationMethod(IntegrationMethod method);

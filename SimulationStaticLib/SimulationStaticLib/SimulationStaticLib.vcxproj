@@ -138,23 +138,30 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="CapsuleCollider.h" />
     <ClInclude Include="Collider.h" />
     <ClInclude Include="CollisionEvent.h" />
+    <ClInclude Include="CuboidCollider.h" />
+    <ClInclude Include="CylinderCollider.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="Line.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="PhysicsObject.h" />
     <ClInclude Include="PhysicsWorld.h" />
-    <ClInclude Include="Plane.h" />
+    <ClInclude Include="PlaneCollider.h" />
     <ClInclude Include="RigidBody.h" />
     <ClInclude Include="SoftBody.h" />
     <ClInclude Include="SphereCollider.h" />
     <ClInclude Include="Spring.h" />
+    <ClInclude Include="SpringParticle.h" />
     <ClInclude Include="Transform.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CapsuleCollider.cpp" />
     <ClCompile Include="Collider.cpp" />
     <ClCompile Include="CollisionEvent.cpp" />
+    <ClCompile Include="CuboidCollider.cpp" />
+    <ClCompile Include="CylinderCollider.cpp" />
     <ClCompile Include="Line.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -164,12 +171,13 @@
     </ClCompile>
     <ClCompile Include="PhysicsObject.cpp" />
     <ClCompile Include="PhysicsWorld.cpp" />
-    <ClCompile Include="Plane.cpp" />
+    <ClCompile Include="PlaneCollider.cpp" />
     <ClCompile Include="RigidBody.cpp" />
     <ClCompile Include="SimulationStaticLib.cpp" />
     <ClCompile Include="SoftBody.cpp" />
     <ClCompile Include="SphereCollider.cpp" />
     <ClCompile Include="Spring.cpp" />
+    <ClCompile Include="SpringParticle.cpp" />
     <ClCompile Include="Transform.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

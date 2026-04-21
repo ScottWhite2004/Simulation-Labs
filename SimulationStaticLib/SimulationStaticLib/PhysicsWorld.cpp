@@ -1,9 +1,9 @@
 #include "pch.h"
 #include "PhysicsWorld.h"
 
-void PhysicsWorld::addRigidBody(const RigidBody& body)
+void PhysicsWorld::addObject(const PhysicsObject& object)
 {
-	_rigidBodies.push_back(new RigidBody(body));
+	_objects.push_back(new PhysicsObject(object));
 }
 
 void PhysicsWorld::addSpring(const Spring& spring)
@@ -20,23 +20,23 @@ void PhysicsWorld::step(float deltaTime)
 
 void PhysicsWorld::applyGlobalForces(float deltaTime)
 {
-	for (auto& body : _rigidBodies)
+	for (auto& objects : _objects)
 	{
-		//Apply gravity and other global forces to body
+		objects->addForce(_gravity * objects->getMass());
 	}
 }
 
 void PhysicsWorld::integrate(float deltaTime)
 {
-	for (auto& body : _rigidBodies)
+	for (auto& objects : _objects)
 	{
 		switch (_selectedIntegrationMethod)
 		{
 		case IntegrationMethod::Euler:
-			//Integrate rigid body using Euler method
+			objects->IntegrateEuler(deltaTime);
 			break;
 		case IntegrationMethod::SemiImplicitEuler:
-			//Integrate rigid body using Semi-Implicit Euler method
+			objects->IntegrateSemiImplicitEuler(deltaTime);
 			break;
 		default:
 			break;
@@ -51,9 +51,9 @@ void PhysicsWorld::setIntegrationMethod(IntegrationMethod method)
 
 void PhysicsWorld::handleCollisions()
 {
-	for (auto i = 0; i < _rigidBodies.size(); i++)
+	for (auto i = 0; i < _objects.size(); i++)
 	{
-		for (auto j = 0; j < _rigidBodies.size(); j++)
+		for (auto j = 0; j < _objects.size(); j++)
 		{
 			//Check for collisions between _rigidBodies[i] and _rigidBodies[j]
 			//If collision detected, create CollisionEvent and resolve collision

@@ -14,6 +14,7 @@
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
 
 #include <iostream>
 #include <fstream>
@@ -49,6 +50,7 @@
 #include "AngularDisplacement.h"
 #include "AngularVelocity.h"
 #include "Spring.h"
+#include "PhysicsWorld.h"
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
 
@@ -70,7 +72,7 @@ class HelloTriangleApplication {
 public:
     HelloTriangleApplication()
         : _clearScenario(&uiClearColour)
-        , _selectedScenario(_clearScenario)
+        , _selectedScenario(_clearScenario), _physicsWorld(gravity)
     {
     }
 
@@ -145,6 +147,10 @@ private:
 	std::vector<Spring> _clothSprings;
 	std::vector<uint32_t> _clothIndices;
 	std::vector<Vertex> _clothVertices;
+	RigidBody _testRigidBody;
+
+    //Physics
+	PhysicsWorld _physicsWorld;
 
 
     //World Forces
@@ -183,7 +189,7 @@ private:
 
     //Cloth Creation
 
-	void createCloth(int width, int height, float spacing, const Material& material);
+	//void createCloth(int width, int height, float spacing, const Material& material);
 
     uint32_t getClothParticleIndex(int x, int y, int width) {
         return y * width + x;
@@ -238,6 +244,7 @@ void HelloTriangleApplication::initVulkan() {
 	_swapChainManager.initialize(&_vulkanContext, &_windowManager);
 	_swapChainManager.createSwapChain();
     _swapChainManager.createImageViews();
+	_testRigidBody = RigidBody(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f), glm::vec3(0.0f), 1.0f);
 
     const VkExtent2D extent = _swapChainManager.getExtent();
     const float aspect = (extent.height > 0)
@@ -307,7 +314,7 @@ void HelloTriangleApplication::initVulkan() {
 	_swapChainManager.createFramebuffers(_renderPassManager.getRenderPass(),depthImageView);
 	_syncManager.initialize(&_vulkanContext, &_swapChainManager, MAX_FRAMES_IN_FLIGHT);
 	Material defaultMaterial = Material(glm::vec4(1.0f), 0.0f, 1.0f, _texManager.getTexture("default"));
-	createCloth(30, 30, 0.1f, defaultMaterial);
+	//createCloth(30, 30, 0.1f, defaultMaterial);
     createUniformBuffers();
     createDescriptorPool();
 
@@ -318,9 +325,10 @@ void HelloTriangleApplication::initVulkan() {
         lightingBufferInfos[i].range = sizeof(LightingUBO);
     }
 
-    for(auto & particle : _clothParticles) {
-        particle.upload(_vulkanContext, MAX_FRAMES_IN_FLIGHT, defaultMaterial.getTextureImageView(), defaultMaterial.getTextureSampler(), lightingBufferInfos);
-	}
+ //   for(auto & particle : _clothParticles) {
+ //       particle.upload(_vulkanContext, MAX_FRAMES_IN_FLIGHT, defaultMaterial.getTextureImageView(), defaultMaterial.getTextureSampler(), lightingBufferInfos);
+	//}
+	_physicsWorld.addObject(_testRigidBody);
     createDescriptorSets();
     createCommandBuffers();
     initImGui();
@@ -329,102 +337,102 @@ void HelloTriangleApplication::initVulkan() {
 }
 
 
-void HelloTriangleApplication::createCloth(int width, int height, float spacing, const Material& material)
-{
-    if (width <= 1 || height <= 1 || spacing <= 0.0f) {
-        return;
-    }
-
-    for (auto& particle : _clothParticles) {
-        particle.destroy(_vulkanContext);
-    }
-
-    _clothParticles.clear();
-    _clothSprings.clear();
-
-    const size_t particleCount = static_cast<size_t>(width) * static_cast<size_t>(height);
-
-    const size_t structuralCount =
-        static_cast<size_t>(width - 1) * static_cast<size_t>(height) +
-        static_cast<size_t>(width) * static_cast<size_t>(height - 1);
-
-    const size_t shearCount =
-        2ull * static_cast<size_t>(width - 1) * static_cast<size_t>(height - 1);
-
-    // Axial bend + diagonal bend (flexion)
-    const size_t bendAxialCount =
-        static_cast<size_t>(std::max(0, width - 2)) * static_cast<size_t>(height) +
-        static_cast<size_t>(width) * static_cast<size_t>(std::max(0, height - 2));
-
-    const size_t bendDiagonalCount =
-        2ull * static_cast<size_t>(std::max(0, width - 2)) * static_cast<size_t>(std::max(0, height - 2));
-
-    _clothParticles.reserve(particleCount);
-    _clothSprings.reserve(structuralCount + shearCount + bendAxialCount + bendDiagonalCount);
-
-    const glm::vec3 origin(
-        -0.5f * static_cast<float>(width - 1) * spacing,
-        4.0f,
-        0.0f);
-
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
-            const glm::vec3 p = origin + glm::vec3(x * spacing, -y * spacing, 0.0f);
-
-            Sphere particle(
-                p,
-                glm::vec3(0.0f),
-                glm::vec3(0.0f),
-                SphereCollider(glm::vec3(0.0f), 0.07f),
-                0.01f,
-                material,
-                0.07f);
-
-            particle.create();
-
-            if ((y == 0 && x == 0) || (y == 0 && x == width - 1)) {
-                particle.SetStatic(true);
-            }
-
-            _clothParticles.emplace_back(std::move(particle));
-        }
-    }
-
-    auto addSpring = [&](uint32_t a, uint32_t b, float k, float d) {
-        const float rest = glm::distance(_clothParticles[a].getPos(), _clothParticles[b].getPos());
-        _clothSprings.emplace_back(&_clothParticles[a], &_clothParticles[b], rest, k, d);
-        };
-
-    // Tunables
-    const float kStructural = 3.0f;
-    const float dStructural = 1.2f;
-    const float kShear = 2.0f;
-    const float dShear = 1.0f;
-    const float kFlexion = 1.0f; // lower than structural
-    const float dFlexion = 0.7f;
-
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
-            const uint32_t i = getClothParticleIndex(x, y, width);
-
-            // Structural
-            if (x + 1 < width)  addSpring(i, getClothParticleIndex(x + 1, y, width), kStructural, dStructural);
-            if (y + 1 < height) addSpring(i, getClothParticleIndex(x, y + 1, width), kStructural, dStructural);
-
-            // Shear
-            if (x + 1 < width && y + 1 < height) addSpring(i, getClothParticleIndex(x + 1, y + 1, width), kShear, dShear);
-            if (x - 1 >= 0 && y + 1 < height)    addSpring(i, getClothParticleIndex(x - 1, y + 1, width), kShear, dShear);
-
-            // Flexion (axial 2-hop)
-            if (x + 2 < width)  addSpring(i, getClothParticleIndex(x + 2, y, width), kFlexion, dFlexion);
-            if (y + 2 < height) addSpring(i, getClothParticleIndex(x, y + 2, width), kFlexion, dFlexion);
-
-            // Flexion (diagonal 2-hop) - improves fold resistance
-            if (x + 2 < width && y + 2 < height) addSpring(i, getClothParticleIndex(x + 2, y + 2, width), kFlexion, dFlexion);
-            if (x - 2 >= 0 && y + 2 < height)    addSpring(i, getClothParticleIndex(x - 2, y + 2, width), kFlexion, dFlexion);
-        }
-    }
-}
+//void HelloTriangleApplication::createCloth(int width, int height, float spacing, const Material& material)
+//{
+//    if (width <= 1 || height <= 1 || spacing <= 0.0f) {
+//        return;
+//    }
+//
+//    for (auto& particle : _clothParticles) {
+//        particle.destroy(_vulkanContext);
+//    }
+//
+//    _clothParticles.clear();
+//    _clothSprings.clear();
+//
+//    const size_t particleCount = static_cast<size_t>(width) * static_cast<size_t>(height);
+//
+//    const size_t structuralCount =
+//        static_cast<size_t>(width - 1) * static_cast<size_t>(height) +
+//        static_cast<size_t>(width) * static_cast<size_t>(height - 1);
+//
+//    const size_t shearCount =
+//        2ull * static_cast<size_t>(width - 1) * static_cast<size_t>(height - 1);
+//
+//    // Axial bend + diagonal bend (flexion)
+//    const size_t bendAxialCount =
+//        static_cast<size_t>(std::max(0, width - 2)) * static_cast<size_t>(height) +
+//        static_cast<size_t>(width) * static_cast<size_t>(std::max(0, height - 2));
+//
+//    const size_t bendDiagonalCount =
+//        2ull * static_cast<size_t>(std::max(0, width - 2)) * static_cast<size_t>(std::max(0, height - 2));
+//
+//    _clothParticles.reserve(particleCount);
+//    _clothSprings.reserve(structuralCount + shearCount + bendAxialCount + bendDiagonalCount);
+//
+//    const glm::vec3 origin(
+//        -0.5f * static_cast<float>(width - 1) * spacing,
+//        4.0f,
+//        0.0f);
+//
+//    for (int y = 0; y < height; y++) {
+//        for (int x = 0; x < width; x++) {
+//            const glm::vec3 p = origin + glm::vec3(x * spacing, -y * spacing, 0.0f);
+//
+//            Sphere particle(
+//                p,
+//                glm::vec3(0.0f),
+//                glm::vec3(0.0f),
+//                SphereCollider(glm::vec3(0.0f), 0.07f),
+//                0.1f,
+//                material,
+//                0.07f);
+//
+//            particle.create();
+//
+//            if ((y == 0 && x == 0) || (y == 0 && x == width - 1)) {
+//                particle.SetStatic(true);
+//            }
+//
+//            _clothParticles.emplace_back(std::move(particle));
+//        }
+//    }
+//
+//    auto addSpring = [&](uint32_t a, uint32_t b, float k, float d) {
+//        const float rest = glm::distance(_clothParticles[a].getPos(), _clothParticles[b].getPos());
+//        _clothSprings.emplace_back(&_clothParticles[a], &_clothParticles[b], rest, k, d);
+//        };
+//
+//    // Tunables
+//    const float kStructural = 3.0f;
+//    const float dStructural = 1.2f;
+//    const float kShear = 2.0f;
+//    const float dShear = 1.0f;
+//    const float kFlexion = 1.0f; // lower than structural
+//    const float dFlexion = 0.7f;
+//
+//    for (int y = 0; y < height; y++) {
+//        for (int x = 0; x < width; x++) {
+//            const uint32_t i = getClothParticleIndex(x, y, width);
+//
+//            // Structural
+//            if (x + 1 < width)  addSpring(i, getClothParticleIndex(x + 1, y, width), kStructural, dStructural);
+//            if (y + 1 < height) addSpring(i, getClothParticleIndex(x, y + 1, width), kStructural, dStructural);
+//
+//            // Shear
+//            if (x + 1 < width && y + 1 < height) addSpring(i, getClothParticleIndex(x + 1, y + 1, width), kShear, dShear);
+//            if (x - 1 >= 0 && y + 1 < height)    addSpring(i, getClothParticleIndex(x - 1, y + 1, width), kShear, dShear);
+//
+//            // Flexion (axial 2-hop)
+//            if (x + 2 < width)  addSpring(i, getClothParticleIndex(x + 2, y, width), kFlexion, dFlexion);
+//            if (y + 2 < height) addSpring(i, getClothParticleIndex(x, y + 2, width), kFlexion, dFlexion);
+//
+//            // Flexion (diagonal 2-hop) - improves fold resistance
+//            if (x + 2 < width && y + 2 < height) addSpring(i, getClothParticleIndex(x + 2, y + 2, width), kFlexion, dFlexion);
+//            if (x - 2 >= 0 && y + 2 < height)    addSpring(i, getClothParticleIndex(x - 2, y + 2, width), kFlexion, dFlexion);
+//        }
+//    }
+//}
 
 void HelloTriangleApplication::initImGui() {
     IMGUI_CHECKVERSION();
@@ -488,17 +496,7 @@ void HelloTriangleApplication::cleanupImGui() {
 
 void HelloTriangleApplication::update(float seconds)
 {
-    _selectedScenario.OnUpdate(seconds);
-    for (auto& spring : _clothSprings)
-    {
-		spring.update();
-    }
-
-    for (auto& particle : _clothParticles)
-    {
-        particle.addForce(gravity * particle.getMass()); // Apply gravity to each cloth particle
-        particle.IntegrateSemiImplicitEuler(seconds);
-	}
+	_physicsWorld.step(seconds);
 }
 
 void HelloTriangleApplication::updateCameraControls(float dt)
@@ -1084,7 +1082,7 @@ void HelloTriangleApplication::updateUniformBuffer(uint32_t currentImage) {
     for(auto & particle : _clothParticles)
     {
 		const glm::mat4 translation = glm::translate(glm::mat4(1.0f), particle.getPos());
-		const glm::mat4 rotation = glm::mat4_cast(glm::normalize(particle.getOrientation()));
+       const glm::mat4 rotation = glm::mat4_cast(glm::normalize(particle.getTransform().getRotation()));
 		const glm::mat4 model = translation * rotation;
         particle.updateUniformBuffer(currentImage, model, ubo.view, ubo.proj);
 	}
