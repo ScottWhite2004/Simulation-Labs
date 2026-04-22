@@ -44,7 +44,7 @@ VkPipeline PipelineManager::createGraphicsPipeline(const std::string& name, VkSh
 
 	// Reasonable defaults
 	builder.setInputAssembly(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-	builder.setRasterFill(VK_POLYGON_MODE_FILL, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE);
+	builder.setRasterFill(VK_POLYGON_MODE_FILL, VK_CULL_MODE_NONE, VK_FRONT_FACE_COUNTER_CLOCKWISE);
 	builder.setMultisample(VK_SAMPLE_COUNT_1_BIT);
 	builder.setViewport(0.f, 0.f, static_cast<float>(_swapchainManager->getExtent().width), static_cast<float>(_swapchainManager->getExtent().height));
 	builder.setScissor({ 0,0 }, _swapchainManager->getExtent());

@@ -51,6 +51,9 @@
 #include "AngularVelocity.h"
 #include "Spring.h"
 #include "PhysicsWorld.h"
+#include "WorldObject.h"
+#include "WorldObjectManager.h"
+#include "Capsule.h"
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
 
@@ -151,6 +154,8 @@ private:
 
     //Physics
 	PhysicsWorld _physicsWorld;
+	WorldObjectManager _worldObjectManager;
+    WorldObject* _movingCapsule{ nullptr };
 
 
     //World Forces
@@ -177,7 +182,9 @@ private:
 	//Depth resources
 	void createDepthResources();
 
-	Camera mainCamera;
+	Camera perspectiveCamera;
+	Camera orthographicCamera;
+
 
 
     // --- Drawing and Swapchain Handling ---
@@ -244,25 +251,42 @@ void HelloTriangleApplication::initVulkan() {
 	_swapChainManager.initialize(&_vulkanContext, &_windowManager);
 	_swapChainManager.createSwapChain();
     _swapChainManager.createImageViews();
-	_testRigidBody = RigidBody(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f), glm::vec3(0.0f), 1.0f);
+
 
     const VkExtent2D extent = _swapChainManager.getExtent();
     const float aspect = (extent.height > 0)
         ? static_cast<float>(extent.width) / static_cast<float>(extent.height)
         : 1.0f;
 
-    mainCamera = Camera(
+    perspectiveCamera = Camera(
         glm::vec3(0.0f, 0.0f, 5.0f),
         glm::vec3(0.0f, 0.0f, 0.0f),
         glm::vec3(0.0f, 1.0f, 0.0f),
         90.0f,
         aspect,
         0.1f,
-        300.0f
+        300.0f,
+		10.0f,
+		ProjectionType::Perspective
     );
 
-    _cameraManager.addCamera(mainCamera);
-    _cameraManager.switchToCamera(0); // Make the first camera active
+    orthographicCamera = Camera(
+        glm::vec3(0.0f, 0.0f, 5.0f),
+        glm::vec3(0.0f, 0.0f, 0.0f),
+        glm::vec3(0.0f, 1.0f, 0.0f),
+        90.0f,
+        aspect,
+        0.1f,
+		300.0f,
+		10.0f,
+        ProjectionType::Orthographic
+	);
+
+    
+
+    _cameraManager.addCamera("Perspective",perspectiveCamera);
+	_cameraManager.addCamera("Orthographic", orthographicCamera);
+    _cameraManager.switchToCamera("Perspective"); // Make the first camera active
     // ---------------------------------------------
 
 	_renderPassManager.initialize(&_vulkanContext, &_swapChainManager);
@@ -314,6 +338,18 @@ void HelloTriangleApplication::initVulkan() {
 	_swapChainManager.createFramebuffers(_renderPassManager.getRenderPass(),depthImageView);
 	_syncManager.initialize(&_vulkanContext, &_swapChainManager, MAX_FRAMES_IN_FLIGHT);
 	Material defaultMaterial = Material(glm::vec4(1.0f), 0.0f, 1.0f, _texManager.getTexture("default"));
+    _movingCapsule = _worldObjectManager.addCapsule(
+        "MovingCapsule",
+        glm::vec3(0.0f, 1.0f, -2.0f),
+        glm::vec3(0.0f),
+        glm::vec3(1.0f),
+        0.5f,
+        2.0f,
+        defaultMaterial,
+        glm::vec3(0.0f, 0.0f, 0.8f),
+        1.0f
+    );
+
 	//createCloth(30, 30, 0.1f, defaultMaterial);
     createUniformBuffers();
     createDescriptorPool();
@@ -328,7 +364,13 @@ void HelloTriangleApplication::initVulkan() {
  //   for(auto & particle : _clothParticles) {
  //       particle.upload(_vulkanContext, MAX_FRAMES_IN_FLIGHT, defaultMaterial.getTextureImageView(), defaultMaterial.getTextureSampler(), lightingBufferInfos);
 	//}
-	_physicsWorld.addObject(_testRigidBody);
+    _worldObjectManager.uploadWorldObjects(
+        _vulkanContext,
+        MAX_FRAMES_IN_FLIGHT,
+        defaultMaterial.getTextureImageView(),
+        defaultMaterial.getTextureSampler(),
+        lightingBufferInfos
+    );
     createDescriptorSets();
     createCommandBuffers();
     initImGui();
@@ -497,6 +539,10 @@ void HelloTriangleApplication::cleanupImGui() {
 void HelloTriangleApplication::update(float seconds)
 {
 	_physicsWorld.step(seconds);
+    if (_movingCapsule != nullptr && _movingCapsule->getRigidBody() != nullptr) {
+        _movingCapsule->getRigidBody()->IntegrateSemiImplicitEuler(seconds);
+    }
+    _worldObjectManager.syncWorldObjects();
 }
 
 void HelloTriangleApplication::updateCameraControls(float dt)
@@ -506,39 +552,62 @@ void HelloTriangleApplication::updateCameraControls(float dt)
     }
 
     ImGuiIO& io = ImGui::GetIO();
-    if (io.WantCaptureKeyboard) {
-        return;
-    }
-
     GLFWwindow* window = _windowManager.getWindow();
-    const float moveStep = cameraMoveSpeed * dt;
-    const float lookStep = cameraLookSpeed * dt;
 
-    float right = 0.0f;
-    float forward = 0.0f;
-    float up = 0.0f;
+    // --- Keyboard movement (WASD + QE) ---
+    if (!io.WantCaptureKeyboard) {
+        const float moveStep = cameraMoveSpeed * dt;
 
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) forward += moveStep;
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) forward -= moveStep;
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) right += moveStep;
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) right -= moveStep;
-    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) up += moveStep;
-    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) up -= moveStep;
+        float right = 0.0f;
+        float forward = 0.0f;
+        float up = 0.0f;
 
-    if (right != 0.0f || forward != 0.0f || up != 0.0f) {
-        _cameraManager.panCurrentCamera(right, forward, up);
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) forward += moveStep;
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) forward -= moveStep;
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) right += moveStep;
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) right -= moveStep;
+        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) up += moveStep;
+        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) up -= moveStep;
+
+        if (right != 0.0f || forward != 0.0f || up != 0.0f) {
+            _cameraManager.panCurrentCamera(right, forward, up);
+        }
     }
 
-    float yaw = 0.0f;
-    float pitch = 0.0f;
+    // --- Mouse rotation (hold Right Mouse Button) ---
+    static bool rotating = false;
+    static double lastX = 0.0;
+    static double lastY = 0.0;
 
-    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) yaw += lookStep;
-    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) yaw -= lookStep;
-    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) pitch += lookStep;
-    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) pitch -= lookStep;
+    if (!io.WantCaptureMouse && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS) {
+        double mouseX = 0.0;
+        double mouseY = 0.0;
+        glfwGetCursorPos(window, &mouseX, &mouseY);
 
-    if (yaw != 0.0f || pitch != 0.0f) {
-        _cameraManager.rotateCurrentCamera(yaw, pitch);
+        if (!rotating) {
+            rotating = true;
+            lastX = mouseX;
+            lastY = mouseY;
+        }
+        else {
+            const double deltaX = mouseX - lastX;
+            const double deltaY = mouseY - lastY;
+
+            // Sensitivity: tune as needed.
+            const float mouseLookSensitivity = 0.0025f * cameraLookSpeed;
+            const float yaw = static_cast<float>(-deltaX) * mouseLookSensitivity;
+            const float pitch = static_cast<float>(-deltaY) * mouseLookSensitivity;
+
+            if (yaw != 0.0f || pitch != 0.0f) {
+                _cameraManager.rotateCurrentCamera(yaw, pitch);
+            }
+
+            lastX = mouseX;
+            lastY = mouseY;
+        }
+    }
+    else {
+        rotating = false;
     }
 }
 
@@ -593,6 +662,10 @@ void HelloTriangleApplication::cleanup() {
     for (auto& particle : _clothParticles) {
 		particle.destroy(_vulkanContext);
 	}
+
+    _worldObjectManager.destroyWorldObjects(_vulkanContext);
+	_movingCapsule = nullptr;
+
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         vkDestroyBuffer(_vulkanContext.getDevice(), uniformBuffers[i], nullptr);
@@ -830,9 +903,28 @@ void HelloTriangleApplication::drawFrame() {
 			ImGui::ColorPicker4("Clear Colour", (float*)&uiClearColour);
 			ImGui::EndMenu();
         }
-        if (ImGui::BeginMenu("Camera"))
+        const std::string cameraMenuLabel = "Camera: " + _cameraManager.getCurrentCameraName();
+        if (ImGui::BeginMenu(cameraMenuLabel.c_str()))
         {
-			ImGui::EndMenu();
+            if (ImGui::MenuItem("Reset Local Camera"))
+            {
+				_cameraManager.resetLocalCamera();
+            }
+            const std::unordered_map<std::string, Camera>& cameras = _cameraManager.getCameras();
+            const std::string& currentName = _cameraManager.getCurrentCameraName();
+
+            for (std::unordered_map<std::string, Camera>::const_iterator it = cameras.begin(); it != cameras.end(); ++it)
+            {
+                const std::string& name = it->first;
+                const bool isSelected = (name == currentName);
+
+                if (ImGui::MenuItem(name.c_str(), nullptr, isSelected))
+                {
+                    _cameraManager.switchToCamera(name);
+                }
+            }
+
+            ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Material"))
         {
@@ -1040,10 +1132,16 @@ void HelloTriangleApplication::recordCommandBuffer(VkCommandBuffer commandBuffer
         0, 1, &descriptorSets[currentFrame],
         0, nullptr);
 
-    for(auto & particle : _clothParticles)
-    {
-        particle.draw(commandBuffer, _pipelineManager.getPipeline("Pipeline"), _pipelineManager.getPipelineLayout(), currentFrame);
-	}
+ //   for(auto & particle : _clothParticles)
+ //   {
+ //       particle.draw(commandBuffer, _pipelineManager.getPipeline("Pipeline"), _pipelineManager.getPipelineLayout(), currentFrame);
+	//}
+    _worldObjectManager.drawWorldObjects(
+        commandBuffer,
+        _pipelineManager.getPipeline("Pipeline"),
+        _pipelineManager.getPipelineLayout(),
+        currentFrame
+    );
 
     // Render ImGui inside the same render pass
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer, VK_NULL_HANDLE);
@@ -1060,11 +1158,11 @@ void HelloTriangleApplication::updateUniformBuffer(uint32_t currentImage) {
     auto currentTime = std::chrono::high_resolution_clock::now();
     float time = std::chrono::duration<float>(currentTime - startTime).count();
 
-    Camera currentCamera = _cameraManager.getCurrentCamera();
+    Camera localCamera = _cameraManager.getLocalCamera();
     UniformBufferObject ubo{};
 	ubo.model = glm::mat4(1.0f);
-    ubo.view = currentCamera.getViewMatrix();
-    ubo.proj = currentCamera.getProjectionMatrix();
+    ubo.view = localCamera.getViewMatrix();
+    ubo.proj = localCamera.getProjectionMatrix();
     ubo.proj[1][1] *= -1;
 
     LightingUBO lightUBO{};
@@ -1074,18 +1172,20 @@ void HelloTriangleApplication::updateUniformBuffer(uint32_t currentImage) {
     lightUBO.lights[0].color = glm::vec3(1.0f, 1.0f, 1.0f);
     lightUBO.lights[0].ambient = 0.5f;
     lightUBO.lights[0].specular = 1.0f;
-    lightUBO.viewPosWorld = currentCamera.getEye();
+    lightUBO.viewPosWorld = localCamera.getEye();
     lightUBO.shininess = 32.0f;
 
     memcpy(lightingUniformBuffersMapped[currentImage], &lightUBO, sizeof(lightUBO));
 
-    for(auto & particle : _clothParticles)
-    {
-		const glm::mat4 translation = glm::translate(glm::mat4(1.0f), particle.getPos());
-       const glm::mat4 rotation = glm::mat4_cast(glm::normalize(particle.getTransform().getRotation()));
-		const glm::mat4 model = translation * rotation;
-        particle.updateUniformBuffer(currentImage, model, ubo.view, ubo.proj);
-	}
+ //   for(auto & particle : _clothParticles)
+ //   {
+	//	const glm::mat4 translation = glm::translate(glm::mat4(1.0f), particle.getPos());
+ //      const glm::mat4 rotation = glm::mat4_cast(glm::normalize(particle.getRot()));
+	//	const glm::mat4 model = translation * rotation;
+ //       particle.updateUniformBuffer(currentImage, model, ubo.view, ubo.proj);
+	//}
+    _worldObjectManager.updateUniformBuffers(currentImage, ubo.view, ubo.proj);
+
 }
 
 // --- Helper Implementations ---

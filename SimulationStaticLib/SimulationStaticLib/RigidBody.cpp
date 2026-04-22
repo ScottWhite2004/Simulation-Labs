@@ -24,7 +24,10 @@ void RigidBody::IntegrateEuler(float seconds)
 
 	glm::vec3 linearAcceleration = getAccumulatedForces() * getInverseMass();
 	glm::vec3 angularAcceleration = _torque * _inverseInertia;
-	_transform.getPosition() += _velocity * seconds;
+
+	glm::vec3 newPosition = _transform.getPosition() + (_velocity * seconds);
+	_transform.setPosition(newPosition);
+
 	_velocity += linearAcceleration * seconds;
 
 	_angularVelocity += angularAcceleration * seconds;
@@ -50,8 +53,9 @@ void RigidBody::IntegrateSemiImplicitEuler(float seconds)
 	const glm::vec3 angularAcceleration = _torque * _inverseInertia;
 
 	_velocity += linearAcceleration * seconds;
-	_transform.getPosition() += _velocity * seconds;
 
+	glm::vec3 newPosition = _transform.getPosition() + (_velocity * seconds);
+	_transform.setPosition(newPosition);
 
 	_angularVelocity += angularAcceleration * seconds;
 	if (glm::length(_angularVelocity) > 0.0001f)

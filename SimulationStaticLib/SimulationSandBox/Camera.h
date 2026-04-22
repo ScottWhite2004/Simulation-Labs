@@ -2,6 +2,12 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+enum ProjectionType
+{
+	Perspective,
+	Orthographic
+};
+
 class Camera
 {
 	glm::vec3 _eye;
@@ -12,10 +18,13 @@ class Camera
 	float _aspect;
 	float _near;
 	float _far;
+	float _orthoHeight = 10.0f;
+
+	ProjectionType _projectionType = ProjectionType::Perspective;
 
 public:
 	Camera() = default;
-	Camera(const glm::vec3& eye, const glm::vec3& center, const glm::vec3& up, float fovy, float aspect, float near, float far) : _eye(eye), _center(center), _up(up), _fovy(fovy), _aspect(aspect), _near(near), _far(far) {}
+	Camera(const glm::vec3& eye, const glm::vec3& center, const glm::vec3& up, float fovy, float aspect, float near, float far, float orthoHeight, ProjectionType projectionType) : _eye(eye), _center(center), _up(up), _fovy(fovy), _aspect(aspect), _near(near), _far(far), _orthoHeight(orthoHeight), _projectionType(projectionType) {}
 	~Camera() = default;
 
 	inline glm::mat4 getViewMatrix() const
@@ -31,6 +40,8 @@ public:
 	void setAspect(const float& aspect) { _aspect = aspect; }
 	void setNear(const float& near) { _near = near; }
 	void setFar(const float& far) { _far = far; }
+	void setOrthoHeight(const float& orthoHeight) { _orthoHeight = orthoHeight; }
+	void setProjectionType(const ProjectionType& projectionType) { _projectionType = projectionType; }
 
 	glm::vec3 getEye() const { return _eye; }
 	glm::vec3 getCenter() const { return _center; }

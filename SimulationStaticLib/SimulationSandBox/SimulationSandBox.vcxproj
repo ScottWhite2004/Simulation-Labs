@@ -152,7 +152,10 @@
     <ClInclude Include="Capsule.h" />
     <ClInclude Include="ClearScenario.h" />
     <ClInclude Include="Cube.h" />
+    <ClInclude Include="Cuboid.h" />
     <ClInclude Include="Cylinder.h" />
+    <ClInclude Include="GeometryManager.h" />
+    <ClInclude Include="GraphicsObjects.h" />
     <ClInclude Include="GraphicsPipelineBuilder.h" />
     <ClInclude Include="Image.h" />
     <ClInclude Include="Light.h" />
@@ -173,6 +176,8 @@
     <ClInclude Include="Vertex.h" />
     <ClInclude Include="VulkanContext.h" />
     <ClInclude Include="WindowManager.h" />
+    <ClInclude Include="WorldObject.h" />
+    <ClInclude Include="WorldObjectManager.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AngularDisplacement.cpp" />
@@ -183,7 +188,10 @@
     <ClCompile Include="Capsule.cpp" />
     <ClCompile Include="ClearScenario.cpp" />
     <ClCompile Include="Cube.cpp" />
+    <ClCompile Include="Cuboid.cpp" />
     <ClCompile Include="Cylinder.cpp" />
+    <ClCompile Include="GeometryManager.cpp" />
+    <ClCompile Include="GraphicsObjects.cpp" />
     <ClCompile Include="GraphicsPipelineBuilder.cpp" />
     <ClCompile Include="Image.cpp" />
     <ClCompile Include="Include\imgui\backends\imgui_impl_glfw.cpp" />
@@ -212,6 +220,8 @@
     <ClCompile Include="Vertex.cpp" />
     <ClCompile Include="VulkanContext.cpp" />
     <ClCompile Include="WindowManager.cpp" />
+    <ClCompile Include="WorldObject.cpp" />
+    <ClCompile Include="WorldObjectManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SimulationStaticLib\SimulationStaticLib.vcxproj">

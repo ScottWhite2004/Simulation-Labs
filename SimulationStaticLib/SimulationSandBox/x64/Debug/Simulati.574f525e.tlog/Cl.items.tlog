@@ -6,7 +6,10 @@ C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\
 C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Capsule.cpp;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\x64\Debug\Capsule.obj
 C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\ClearScenario.cpp;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\x64\Debug\ClearScenario.obj
 C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Cube.cpp;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\x64\Debug\Cube.obj
+C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Cuboid.cpp;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\x64\Debug\Cuboid.obj
 C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Cylinder.cpp;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\x64\Debug\Cylinder.obj
+C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\GeometryManager.cpp;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\x64\Debug\GeometryManager.obj
+C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\GraphicsObjects.cpp;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\x64\Debug\GraphicsObjects.obj
 C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\GraphicsPipelineBuilder.cpp;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\x64\Debug\GraphicsPipelineBuilder.obj
 C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Image.cpp;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\x64\Debug\Image.obj
 C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Include\imgui\backends\imgui_impl_glfw.cpp;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\x64\Debug\imgui_impl_glfw.obj
@@ -35,3 +38,5 @@ C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\
 C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\Vertex.cpp;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\x64\Debug\Vertex.obj
 C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\VulkanContext.cpp;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\x64\Debug\VulkanContext.obj
 C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\WindowManager.cpp;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\x64\Debug\WindowManager.obj
+C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\WorldObject.cpp;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\x64\Debug\WorldObject.obj
+C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\WorldObjectManager.cpp;C:\Users\712769\Workspace\Simulation-Labs\SimulationStaticLib\SimulationSandBox\x64\Debug\WorldObjectManager.obj

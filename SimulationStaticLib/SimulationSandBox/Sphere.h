@@ -7,7 +7,7 @@ class Sphere : public Shape
     float _radius;
 
 public:
-    Sphere(const glm::vec3& position, const glm::vec3& rotation, const glm::vec3& velocity, const SphereCollider& sphereCollider, float mass, const Material& material, const float& radius) : Shape(position, rotation, velocity,sphereCollider,mass, material), _radius(radius) {};
+    Sphere(const glm::vec3& position, const glm::vec3& rotation, const glm::vec3& scale,const Material& material, const float& radius) : Shape(position, rotation,scale, material), _radius(radius) {};
 	Sphere() = default;
     ~Sphere();
     void create() override;

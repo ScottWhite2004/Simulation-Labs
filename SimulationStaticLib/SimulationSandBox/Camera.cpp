@@ -6,7 +6,13 @@
 
 glm::mat4 Camera::getProjectionMatrix() const
 {
-    return glm::perspective(glm::radians(_fovy), _aspect, _near, _far);
+    if (_projectionType == ProjectionType::Orthographic)
+    {
+		const float halfHeight = _orthoHeight * 0.5f;
+        const float halfWidth = halfHeight * _aspect;
+		return glm::orthoZO(-halfWidth, halfWidth, -halfHeight, halfHeight, _near, _far);
+    }
+    return glm::perspectiveZO(glm::radians(_fovy), _aspect, _near, _far);
 }
 
 void Camera::rotateCamera(float yawRadians, float pitchRadians)

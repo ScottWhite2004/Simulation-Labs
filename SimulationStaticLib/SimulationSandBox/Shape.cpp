@@ -77,7 +77,7 @@ Shape::Shape() = default;
 Shape::~Shape() = default;
 
 Shape::Shape(Shape&& other)
-  : RigidBody(std::move(other)),
+	: GraphicsObjects(std::move(other)),
 	_vertices(std::move(other._vertices)),
 	_indices(std::move(other._indices)),
 	_uniformBuffers(std::move(other._uniformBuffers)),
@@ -98,7 +98,7 @@ Shape::Shape(Shape&& other)
 
 Shape& Shape::operator=(Shape&& other) {
 	if (this != &other) {
-     RigidBody::operator=(std::move(other));
+		GraphicsObjects::operator=(std::move(other));
 		_vertices = std::move(other._vertices);
 		_indices = std::move(other._indices);
 		_uniformBuffers = std::move(other._uniformBuffers);
@@ -119,12 +119,11 @@ Shape& Shape::operator=(Shape&& other) {
 }
 
 Shape::Shape(const Shape& other)
- : RigidBody(other),
+	: GraphicsObjects(other),
 	_vertices(other._vertices),
 	_indices(other._indices),
 	_material(other._material)
 {
-
 }
 
 Shape& Shape::operator=(const Shape& other) {
@@ -138,7 +137,7 @@ Shape& Shape::operator=(const Shape& other) {
 		_indexBuffer = VK_NULL_HANDLE;
 		_indexBufferMemory = VK_NULL_HANDLE;
 
-        RigidBody::operator=(other);
+		GraphicsObjects::operator=(other);
 		_vertices = other._vertices;
 		_indices = other._indices;
 		_material = other._material;

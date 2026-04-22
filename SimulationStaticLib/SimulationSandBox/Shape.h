@@ -1,12 +1,12 @@
 #pragma once
-#include "RigidBody.h"
 #include <vector>
 #include "vulkan/vulkan.h"
 #include "VulkanContext.h"
 #include "Vertex.h"
 #include "Material.h"
+#include "GraphicsObjects.h"
 
-class Shape : public RigidBody
+class Shape : public GraphicsObjects
 {
 
 	std::vector<Vertex> _vertices = {};
@@ -25,7 +25,7 @@ class Shape : public RigidBody
 
 
 public:
-    Shape(const glm::vec3& position, const glm::vec3& rotation, const glm::vec3& velocity, const SphereCollider& sphereCollider, float mass,  const Material& material) : RigidBody(position,rotation,velocity,sphereCollider,mass), _material(material) {};
+    Shape(const glm::vec3& position, const glm::vec3& rotation, const glm::vec3& scale, const Material& material) : GraphicsObjects(position,rotation,scale), _material(material) {};
 	Shape();
 	~Shape();
 

@@ -10,7 +10,7 @@ class Cylinder : public Shape
 
 public:
 
-    Cylinder(const glm::vec3& position, const glm::vec3& rotation, const glm::vec3& velocity, const SphereCollider& sphereCollider, float mass, const Material& material, const float& radius, const float& height, const int& segments) : Shape(position,rotation,velocity,sphereCollider,mass, material), _radius(radius), _height(height), _segments(segments) {};
+    Cylinder(const glm::vec3& position, const glm::vec3& rotation, const glm::vec3& scale, const Material& material, const float& radius, const float& height, const int& segments) : Shape(position,rotation,scale, material), _radius(radius), _height(height), _segments(segments) {};
     Cylinder() = default;
     ~Cylinder();
 
