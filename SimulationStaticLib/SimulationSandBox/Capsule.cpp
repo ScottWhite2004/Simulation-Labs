@@ -62,7 +62,7 @@ void Capsule::create()
 			}
 
 			vertices.push_back({
-				{ localPos + getPos() },
+				{ localPos },
 				{ 1,1,1 },
 				{ 1.0f - u, 1.0f - t },
 				normal

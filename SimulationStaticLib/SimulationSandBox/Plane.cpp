@@ -6,10 +6,10 @@ void Plane::create()
 	const float halfDepth = _depth * 0.5f;
 
 	setVertices({
-		{{ glm::vec3(-halfWidth, 0.0f, -halfDepth) + getPos() }, {1,1,1}, {0,0}, {0,1,0}},
-		{{ glm::vec3(halfWidth, 0.0f, -halfDepth) + getPos() }, {1,1,1}, {1,0}, {0,1,0}},
-		{{ glm::vec3(halfWidth, 0.0f,  halfDepth) + getPos() }, {1,1,1}, {1,1}, {0,1,0}},
-		{{ glm::vec3(-halfWidth, 0.0f,  halfDepth) + getPos() }, {1,1,1}, {0,1}, {0,1,0}},
+		{{ glm::vec3(-halfWidth, 0.0f, -halfDepth) }, {1,1,1}, {0,0}, {0,1,0}},
+		{{ glm::vec3(halfWidth, 0.0f, -halfDepth) }, {1,1,1}, {1,0}, {0,1,0}},
+		{{ glm::vec3(halfWidth, 0.0f,  halfDepth) }, {1,1,1}, {1,1}, {0,1,0}},
+		{{ glm::vec3(-halfWidth, 0.0f,  halfDepth) }, {1,1,1}, {0,1}, {0,1,0}},
 		});
 
 	setIndices({

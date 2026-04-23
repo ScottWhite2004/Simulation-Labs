@@ -31,9 +31,9 @@ void Cylinder::create() {
 	}
 
 	const uint16_t baseCenterIndex = static_cast<uint16_t>(_localVertices.size());
-	_localVertices.push_back({ {glm::vec3(0.0f, -_height / 2.0f, 0.0f) + getPos()}, {1,1,1}, {0.5f,0.5f}, {0.0f,-1.0f,0.0f} });
+	_localVertices.push_back({ {glm::vec3(0.0f, -_height / 2.0f, 0.0f) }, {1,1,1}, {0.5f,0.5f}, {0.0f,-1.0f,0.0f} });
 	const uint16_t topCenterIndex = static_cast<uint16_t>(_localVertices.size());
-	_localVertices.push_back({ {glm::vec3(0.0f,  _height / 2.0f, 0.0f) + getPos()}, {1,1,1}, {0.5f,0.5f}, {0.0f, 1.0f,0.0f} });
+	_localVertices.push_back({ {glm::vec3(0.0f,  _height / 2.0f, 0.0f) }, {1,1,1}, {0.5f,0.5f}, {0.0f, 1.0f,0.0f} });
 
 	for (int i = 0; i < _segments; ++i) {
 		const uint16_t b0 = static_cast<uint16_t>(i * 2);

@@ -75,7 +75,7 @@ class HelloTriangleApplication {
 public:
     HelloTriangleApplication()
         : _clearScenario(&uiClearColour)
-        , _selectedScenario(_clearScenario), _physicsWorld(gravity)
+		, _selectedScenario(_clearScenario), _physicsWorld(gravity), _worldObjectManager(&_physicsWorld)
     {
     }
 
@@ -155,11 +155,12 @@ private:
     //Physics
 	PhysicsWorld _physicsWorld;
 	WorldObjectManager _worldObjectManager;
-    WorldObject* _movingCapsule{ nullptr };
 
 
     //World Forces
-	glm::vec3 gravity = glm::vec3(0.0f, -0.5f, 0.0f);
+	glm::vec3 gravity = glm::vec3(0.0f, -9.8f, 0.0f);
+
+	int _selectedWorldObjectIndex = -1;
 
 
     // --- Main Flow ---
@@ -178,6 +179,7 @@ private:
     // --- ImGui steps ---
     void initImGui();
     void cleanupImGui();
+	void drawWorldObjectUI();
 
 	//Depth resources
 	void createDepthResources();
@@ -338,17 +340,48 @@ void HelloTriangleApplication::initVulkan() {
 	_swapChainManager.createFramebuffers(_renderPassManager.getRenderPass(),depthImageView);
 	_syncManager.initialize(&_vulkanContext, &_swapChainManager, MAX_FRAMES_IN_FLIGHT);
 	Material defaultMaterial = Material(glm::vec4(1.0f), 0.0f, 1.0f, _texManager.getTexture("default"));
-    _movingCapsule = _worldObjectManager.addCapsule(
-        "MovingCapsule",
-        glm::vec3(0.0f, 1.0f, -2.0f),
-        glm::vec3(0.0f),
+
+
+    _worldObjectManager.addSphere(
+        "TestSphere2",
+        glm::vec3(0.0f, 2.0f, 0.0f),
+        glm::vec3(0.0f, 0.0f, 0.0f),
         glm::vec3(1.0f),
         0.5f,
-        2.0f,
         defaultMaterial,
-        glm::vec3(0.0f, 0.0f, 0.8f),
-        1.0f
+		glm::vec3(0.1f, 0.0f, 0.0f),
+        20.0f
+	);
+
+
+    _worldObjectManager.addSphere(
+        "TestSphere2",
+        glm::vec3(0.0f, 2.0f, 0.0f),
+        glm::vec3(0.0f, 0.0f, 0.0f),
+        glm::vec3(1.0f),
+        0.5f,
+        defaultMaterial,
+        glm::vec3(0.1f, 0.0f, 0.0f),
+        20.0f
     );
+
+
+
+    _worldObjectManager.addPlane(
+        "GroundPlane",
+        glm::vec3(0.0f, -1.0f, 0.0f),
+        glm::vec3(0.0f, 0.0f, 0.0f),
+        glm::vec3(10.0f, 1.0f, 10.0f),
+        10.0f,
+        10.0f,
+        defaultMaterial,
+		glm::vec3(0.0f, 0.0f, 0.0f),
+        1.0f
+	);
+
+	_physicsWorld.setGravity(gravity);
+
+
 
 	//createCloth(30, 30, 0.1f, defaultMaterial);
     createUniformBuffers();
@@ -376,6 +409,128 @@ void HelloTriangleApplication::initVulkan() {
     initImGui();
 
 	_selectedScenario.OnLoad();
+}
+
+void HelloTriangleApplication::drawWorldObjectUI()
+{
+    ImGui::Begin("World Object Inspector");
+
+    const std::vector<WorldObject*>& worldObjects = _worldObjectManager.getWorldObjects();
+
+    if (worldObjects.empty()) {
+        _selectedWorldObjectIndex = -1;
+        ImGui::TextUnformatted("No world objects.");
+        ImGui::End();
+        return;
+    }
+
+    if (_selectedWorldObjectIndex < 0) {
+        _selectedWorldObjectIndex = 0;
+    }
+    if (_selectedWorldObjectIndex >= static_cast<int>(worldObjects.size())) {
+        _selectedWorldObjectIndex = static_cast<int>(worldObjects.size()) - 1;
+    }
+
+    ImGui::BeginChild("WorldObjectList", ImVec2(230.0f, 0.0f), true);
+    for (size_t i = 0; i < worldObjects.size(); ++i) {
+        const bool isSelected = (_selectedWorldObjectIndex == static_cast<int>(i));
+        const std::string label = worldObjects[i]->getName() + "##" + std::to_string(i);
+        if (ImGui::Selectable(label.c_str(), isSelected)) {
+            _selectedWorldObjectIndex = static_cast<int>(i);
+        }
+    }
+    ImGui::EndChild();
+
+    ImGui::SameLine();
+    ImGui::BeginGroup();
+
+    WorldObject* selected = worldObjects[_selectedWorldObjectIndex];
+    RigidBody* rigidBody = selected->getRigidBody();
+    Collider* collider = selected->getCollider();
+    Shape* shape = selected->getShape();
+
+    ImGui::Text("Name: %s", selected->getName().c_str());
+
+    if (rigidBody != nullptr) {
+        glm::vec3 rigidBodyPos = rigidBody->getPos();
+        if (ImGui::DragFloat3("RigidBody Position", &rigidBodyPos.x, 0.05f)) {
+            rigidBody->setPos(rigidBodyPos);
+            if (collider != nullptr) {
+                collider->SetPosition(rigidBodyPos);
+            }
+            if (shape != nullptr) {
+                shape->setPosition(rigidBodyPos);
+            }
+            selected->syncTransform();
+        }
+
+        glm::vec3 velocity = rigidBody->getVelocity();
+        if (ImGui::DragFloat3("Velocity", &velocity.x, 0.05f)) {
+            rigidBody->setVelocity(velocity);
+        }
+
+        glm::vec3 angularVelocity = rigidBody->getAngularVelocity();
+        if (ImGui::DragFloat3("Angular Velocity", &angularVelocity.x, 0.05f)) {
+            rigidBody->setAngularVelocity(angularVelocity);
+        }
+
+        float mass = rigidBody->getMass();
+        if (ImGui::DragFloat("Mass", &mass, 0.1f, 0.001f, 10000.0f, "%.3f")) {
+            rigidBody->SetMass(mass);
+            if (collider != nullptr) {
+                rigidBody->CalculateInertia();
+            }
+        }
+
+        bool isStatic = rigidBody->isStatic();
+        if (ImGui::Checkbox("Static", &isStatic)) {
+            rigidBody->SetStatic(isStatic);
+        }
+
+        if (ImGui::Button("Zero Velocity")) {
+            rigidBody->setVelocity(glm::vec3(0.0f));
+            rigidBody->setAngularVelocity(glm::vec3(0.0f));
+        }
+    }
+    else {
+        ImGui::TextUnformatted("No rigid body attached.");
+    }
+
+    if (collider != nullptr) {
+        glm::vec3 colliderPos = collider->GetPosition();
+        if (ImGui::DragFloat3("Collider Position", &colliderPos.x, 0.05f)) {
+            collider->SetPosition(colliderPos);
+            if (rigidBody != nullptr) {
+                rigidBody->setPos(colliderPos);
+            }
+            if (shape != nullptr) {
+                shape->setPosition(colliderPos);
+            }
+            selected->syncTransform();
+        }
+    }
+    else {
+        ImGui::TextUnformatted("No collider attached.");
+    }
+
+    if (shape != nullptr) {
+        glm::vec3 renderPos = shape->getPos();
+        if (ImGui::DragFloat3("Rendering Position", &renderPos.x, 0.05f)) {
+            shape->setPosition(renderPos);
+            if (rigidBody != nullptr) {
+                rigidBody->setPos(renderPos);
+            }
+            if (collider != nullptr) {
+                collider->SetPosition(renderPos);
+            }
+        }
+    }
+    else {
+        ImGui::TextUnformatted("No shape attached.");
+    }
+
+    ImGui::EndGroup();
+    ImGui::End();
 }
 
 
@@ -539,9 +694,6 @@ void HelloTriangleApplication::cleanupImGui() {
 void HelloTriangleApplication::update(float seconds)
 {
 	_physicsWorld.step(seconds);
-    if (_movingCapsule != nullptr && _movingCapsule->getRigidBody() != nullptr) {
-        _movingCapsule->getRigidBody()->IntegrateSemiImplicitEuler(seconds);
-    }
     _worldObjectManager.syncWorldObjects();
 }
 
@@ -664,7 +816,6 @@ void HelloTriangleApplication::cleanup() {
 	}
 
     _worldObjectManager.destroyWorldObjects(_vulkanContext);
-	_movingCapsule = nullptr;
 
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
@@ -945,19 +1096,23 @@ void HelloTriangleApplication::drawFrame() {
 				}
             }
 			ImGui::InputFloat("timestep", &simulationTimeStep);
+
+            ImGui::Separator();
+            ImGui::TextUnformatted("Physics");
+
+            if (ImGui::DragFloat3("Gravity", &gravity.x, 0.1f, -50.0f, 50.0f, "%.2f"))
+            {
+                _physicsWorld.setGravity(gravity);
+            }
+
+            if (ImGui::Button("Reset Gravity"))
+            {
+                gravity = glm::vec3(0.0f, -9.8f, 0.0f);
+                _physicsWorld.setGravity(gravity);
+            }
             ImGui::EndMenu();
         }
-        if (ImGui::BeginMenu("Displacement"))
-        {
-			ImGui::InputFloat3("Displacement", (float*)&displacement);
-			ImGui::InputFloat("Radians", &displacementRadians);
-            if (ImGui::Button("Apply Displacement"))
-            {
-
-            }
-			ImGui::EndMenu();
-        }
-
+		drawWorldObjectUI();
 		ImGui::EndMainMenuBar();
     }
 

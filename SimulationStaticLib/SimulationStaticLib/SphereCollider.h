@@ -1,35 +1,30 @@
 #pragma once
 #include "Collider.h"
-#include "PlaneCollider.h"
-#include "Line.h"
 #include "glm/glm.hpp"
 
-	class SphereCollider : public Collider
-	{
+class PlaneCollider;
+class CuboidCollider;
+class CylinderCollider;
+class CapsuleCollider;
 
-		float _Radius;
-	public:
+class SphereCollider : public Collider
+{
+	float _Radius{ 0.5f };
 
-		SphereCollider(const glm::vec3& position, float radius)
-			: _Radius(radius)
-		{
-			_Position = position;
-		}
+public:
+	SphereCollider(const glm::vec3& position, float radius) : _Radius(radius) { _Position = position; }
+	SphereCollider();
 
-		SphereCollider();
+	bool IsInside(const glm::vec3& point) const override;
+	bool Intersects(const Line& line) const override;
+	glm::vec3 calculateLocalInertiaTensor(float mass) const override;
 
-		virtual bool IsInside(const glm::vec3& point) const override;
+	float GetRadius() const { return _Radius; }
 
-
-		virtual bool Intersects(const Line& line) const override;
-
-		glm::vec3 calculateLocalInertiaTensor(float mass) const override;
-
-		bool CollidesWith(const SphereCollider& other) const;
-
-		bool CollidesWith(const PlaneCollider& other) const;
-
-		float GetRadius() const { return _Radius; }
-
-	}; 
-
+	bool Collide(const Collider& other, CollisionEvent& outEvent) const override;
+	bool CollideWithSphere(const SphereCollider& sphere, CollisionEvent& outEvent) const override;
+	bool CollideWithPlane(const PlaneCollider& plane, CollisionEvent& outEvent) const override;
+	bool CollideWithCuboid(const CuboidCollider& cuboid, CollisionEvent& outEvent) const override;
+	bool CollideWithCylinder(const CylinderCollider& cylinder, CollisionEvent& outEvent) const override;
+	bool CollideWithCapsule(const CapsuleCollider& capsule, CollisionEvent& outEvent) const override;
+};

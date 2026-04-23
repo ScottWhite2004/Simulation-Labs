@@ -3,6 +3,7 @@
 #include "glm/gtc/quaternion.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "WorldObject.h"
+#include "PhysicsWorld.h"
 #include "Material.h"
 #include <string>
 #include <vector>
@@ -10,6 +11,7 @@
 class WorldObjectManager
 {
 	std::vector<WorldObject*> _worldObjects;
+	PhysicsWorld* _physicsWorld{ nullptr };
 
 	WorldObject* createWorldObject(
 		const std::string& name,
@@ -20,11 +22,11 @@ class WorldObjectManager
 		float mass);
 
 public:
-	WorldObjectManager() = default;
+	WorldObjectManager(PhysicsWorld* physicsWorld = nullptr) : _physicsWorld(physicsWorld) {}
 	~WorldObjectManager() = default;
 
 	void addWorldObject(WorldObject* worldObject) { _worldObjects.push_back(worldObject); }
-	std::vector<WorldObject*> getWorldObjects() const { return _worldObjects; }
+	const std::vector<WorldObject*> getWorldObjects() const { return _worldObjects; }
 
 	WorldObject* addSphere(
 		const std::string& name,
@@ -111,7 +113,14 @@ public:
 				delete obj->getShape();
 			}
 			if (obj->getRigidBody()) {
+				if (_physicsWorld != nullptr)
+				{
+					_physicsWorld->removeObject(obj->getRigidBody());
+				}
 				delete obj->getRigidBody();
+			}
+			if(obj->getCollider()) {
+				delete obj->getCollider();
 			}
 			delete obj;
 		}

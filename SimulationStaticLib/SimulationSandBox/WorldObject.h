@@ -17,6 +17,7 @@ public:
 	Collider* getCollider() const { return _collider; }
 	RigidBody* getRigidBody() const { return _rigidBody; }
 	Shape* getShape() const { return _shape; }
+	const std::string& getName() const { return _name; }
 	void addCollider(Collider* collider) { _collider = collider; }
 	void addRigidBody(RigidBody* rigidBody) { _rigidBody = rigidBody; }
 	void addShape(Shape* shape) { _shape = shape; }
