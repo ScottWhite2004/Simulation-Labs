@@ -15,11 +15,10 @@ class CuboidCollider : public Collider
 
 public:
 	CuboidCollider() = default;
-	CuboidCollider(const glm::vec3& position, float width, float height, float depth)
-		: _width(width), _height(height), _depth(depth)
-	{
-		_Position = position;
-	}
+	CuboidCollider(const Transform& transform, float width, float height, float depth)
+		: Collider(transform), _width(width), _height(height), _depth(depth) {
+	};
+
 
 	glm::vec3 calculateLocalInertiaTensor(float mass) const override;
 	bool IsInside(const glm::vec3& point) const override;

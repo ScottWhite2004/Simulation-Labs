@@ -90,3 +90,9 @@ void RigidBody::CalculateInertia()
 {
 	setInertia(GetCollider()->calculateLocalInertiaTensor(getMass()));
 }
+
+void RigidBody::clearForces()
+{
+	PhysicsObject::clearForces();
+	_torque = glm::vec3(0.0f);
+}

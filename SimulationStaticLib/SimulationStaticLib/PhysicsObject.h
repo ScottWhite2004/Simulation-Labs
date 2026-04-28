@@ -29,7 +29,7 @@ public:
 	void SetMass(float mass) { _mass = mass; _inverseMass = (mass > 0.0f) ? 1.0f / mass : 0.0f; }
 	void SetStatic(bool isStatic) { _isStatic = isStatic; }
 	void addForce(const glm::vec3& force) { _accumulatedForces += force; }
-	void clearForces() { _accumulatedForces = glm::vec3(0.0f); }
+	virtual void clearForces() { _accumulatedForces = glm::vec3(0.0f); }
 	void SetCollider(Collider* collider) { _collider = collider; }
 	Collider* GetCollider() const { return _collider; }
 	virtual void IntegrateEuler(float seconds);

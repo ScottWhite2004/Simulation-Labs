@@ -10,6 +10,7 @@ class Transform
 
 public:
 	Transform(const glm::vec3& position, const glm::vec3& scale, const glm::quat rotation) : _position(position), _scale(scale), _rotation(rotation) {};
+	Transform() : _position(0.0f), _scale(1.0f), _rotation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f)) {}
 	~Transform() = default;
 
 	glm::vec3 getPosition() const;

@@ -154,7 +154,10 @@ void PhysicsWorld::handleCollisions(float deltaTime)
 
 		RigidBody* rigidBody = dynamic_cast<RigidBody*>(object);
 		if (rigidBody != nullptr) {
-			object->GetCollider()->SetPosition(rigidBody->getPos());
+			Transform colliderTransform = object->GetCollider()->GetTransform();
+			colliderTransform.setPosition(rigidBody->getPos());
+			colliderTransform.setRotation(rigidBody->getOrientation());
+			object->GetCollider()->SetTransform(colliderTransform);
 		}
 	}
 

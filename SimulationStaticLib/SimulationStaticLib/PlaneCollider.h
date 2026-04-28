@@ -12,11 +12,10 @@ class PlaneCollider : public Collider
 	glm::vec3 _Normal{ 0.0f, 1.0f, 0.0f };
 
 public:
-	PlaneCollider(const glm::vec3& position, const glm::vec3& normal)
-		: _Normal(glm::normalize(normal))
-	{
-		_Position = position;
-	}
+	PlaneCollider(const Transform& transform, const glm::vec3& normal)
+		: Collider(transform), _Normal(glm::normalize(normal)) {
+	};
+
 
 	bool IsInside(const glm::vec3& point) const override;
 	bool Intersects(const Line& line) const override;

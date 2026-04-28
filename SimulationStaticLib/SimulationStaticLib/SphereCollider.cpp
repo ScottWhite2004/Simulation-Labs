@@ -4,6 +4,7 @@
 #include "CuboidCollider.h"
 #include "CylinderCollider.h"
 #include "CapsuleCollider.h"
+#include <algorithm>
 #include <cmath>
 
 namespace
@@ -14,17 +15,15 @@ namespace
 	}
 }
 
-SphereCollider::SphereCollider() = default;
-
 bool SphereCollider::IsInside(const glm::vec3& point) const
 {
-	const glm::vec3 d = point - _Position;
+	const glm::vec3 d = point - _transform.getPosition();
 	return glm::dot(d, d) <= (_Radius * _Radius);
 }
 
 bool SphereCollider::Intersects(const Line& line) const
 {
-	return line.ShortestDistanceToPoint(_Position) <= _Radius;
+	return line.ShortestDistanceToPoint(_transform.getPosition()) <= _Radius;
 }
 
 glm::vec3 SphereCollider::calculateLocalInertiaTensor(float mass) const
@@ -40,9 +39,12 @@ bool SphereCollider::Collide(const Collider& other, CollisionEvent& outEvent) co
 
 bool SphereCollider::CollideWithSphere(const SphereCollider& sphere, CollisionEvent& outEvent) const
 {
-	const glm::vec3 delta = sphere.GetPosition() - _Position;
+	const float radiusA = _Radius * GetMaxAbsScale(_transform);
+	const float radiusB = sphere.GetRadius() * GetMaxAbsScale(sphere.GetTransform());
+
+	const glm::vec3 delta = sphere.GetTransform().getPosition() - _transform.getPosition();
 	const float distSq = glm::dot(delta, delta);
-	const float r = _Radius + sphere.GetRadius();
+	const float r = radiusA + radiusB;
 	if (distSq > r * r)
 	{
 		return false;
@@ -54,7 +56,7 @@ bool SphereCollider::CollideWithSphere(const SphereCollider& sphere, CollisionEv
 	outEvent.isColliding = true;
 	outEvent.collisionNormal = n;
 	outEvent.penetrationDepth = r - dist;
-	outEvent.collisionPoint = _Position + n * (_Radius - 0.5f * outEvent.penetrationDepth);
+	outEvent.collisionPoint = _transform.getPosition() + n * (radiusA - 0.5f * outEvent.penetrationDepth);
 	return true;
 }
 
@@ -65,85 +67,102 @@ bool SphereCollider::CollideWithPlane(const PlaneCollider& plane, CollisionEvent
 
 bool SphereCollider::CollideWithCuboid(const CuboidCollider& cuboid, CollisionEvent& outEvent) const
 {
-	const glm::vec3 c = cuboid.GetPosition();
-	const glm::vec3 h = cuboid.GetHalfExtents();
+	const Transform& cuboidTransform = cuboid.GetTransform();
+	const glm::vec3 localCenter = ToLocalNoScale(cuboidTransform, _transform.getPosition());
+	const glm::vec3 halfExtents = cuboid.GetHalfExtents() * GetAbsScale(cuboidTransform);
+	const float sphereRadius = _Radius * GetMaxAbsScale(_transform);
 
 	const glm::vec3 closest(
-		Clamp(_Position.x, c.x - h.x, c.x + h.x),
-		Clamp(_Position.y, c.y - h.y, c.y + h.y),
-		Clamp(_Position.z, c.z - h.z, c.z + h.z));
+		Clamp(localCenter.x, -halfExtents.x, halfExtents.x),
+		Clamp(localCenter.y, -halfExtents.y, halfExtents.y),
+		Clamp(localCenter.z, -halfExtents.z, halfExtents.z));
 
-	const glm::vec3 d = _Position - closest;
+	const glm::vec3 d = localCenter - closest;
 	const float distSq = glm::dot(d, d);
-	if (distSq > _Radius * _Radius)
+	if (distSq > sphereRadius * sphereRadius)
 	{
 		return false;
 	}
 
 	const float dist = std::sqrt((distSq > 1e-8f) ? distSq : 1e-8f);
-	const glm::vec3 n = (dist > 1e-5f) ? (d / dist) : glm::vec3(0.0f, 1.0f, 0.0f);
+	const glm::vec3 localNormal = (dist > 1e-5f) ? (d / dist) : glm::vec3(0.0f, 1.0f, 0.0f);
+	const glm::vec3 worldNormal = glm::normalize(ToWorldDirNoScale(cuboidTransform, localNormal));
 
 	outEvent.isColliding = true;
-	outEvent.collisionNormal = n;
-	outEvent.penetrationDepth = _Radius - dist;
-	outEvent.collisionPoint = closest;
+	outEvent.collisionNormal = worldNormal;
+	outEvent.penetrationDepth = sphereRadius - dist;
+	outEvent.collisionPoint = ToWorldNoScale(cuboidTransform, closest);
 	return true;
 }
 
 bool SphereCollider::CollideWithCylinder(const CylinderCollider& cylinder, CollisionEvent& outEvent) const
 {
-	const glm::vec3 cc = cylinder.GetPosition();
-	const float hh = cylinder.GetHalfHeight();
+	const Transform& cylinderTransform = cylinder.GetTransform();
+	const glm::vec3 scale = GetAbsScale(cylinderTransform);
 
-	const float closestY = Clamp(_Position.y, cc.y - hh, cc.y + hh);
+	const float radius = cylinder.GetRadius() * std::max(scale.x, scale.z);
+	const float halfHeight = (cylinder.GetHeight() * 0.5f) * scale.y;
+	const float sphereRadius = _Radius * GetMaxAbsScale(_transform);
 
-	glm::vec2 v(_Position.x - cc.x, _Position.z - cc.z);
+	const glm::vec3 localSphere = ToLocalNoScale(cylinderTransform, _transform.getPosition());
+
+	const float closestY = Clamp(localSphere.y, -halfHeight, halfHeight);
+
+	glm::vec2 v(localSphere.x, localSphere.z);
 	float len = glm::length(v);
-	if (len > cylinder.GetRadius() && len > 1e-6f)
+	if (len > radius && len > 1e-6f)
 	{
-		v *= (cylinder.GetRadius() / len);
+		v *= (radius / len);
 	}
 
-	const glm::vec3 closest(cc.x + v.x, closestY, cc.z + v.y);
-	const glm::vec3 d = _Position - closest;
+	const glm::vec3 closest(v.x, closestY, v.y);
+	const glm::vec3 d = localSphere - closest;
 	const float distSq = glm::dot(d, d);
-	if (distSq > _Radius * _Radius)
+	if (distSq > sphereRadius * sphereRadius)
 	{
 		return false;
 	}
 
 	const float dist = std::sqrt((distSq > 1e-8f) ? distSq : 1e-8f);
-	const glm::vec3 n = (dist > 1e-5f) ? (d / dist) : glm::vec3(0.0f, 1.0f, 0.0f);
+	const glm::vec3 localNormal = (dist > 1e-5f) ? (d / dist) : glm::vec3(0.0f, 1.0f, 0.0f);
+	const glm::vec3 worldNormal = glm::normalize(ToWorldDirNoScale(cylinderTransform, localNormal));
 
 	outEvent.isColliding = true;
-	outEvent.collisionNormal = n;
-	outEvent.penetrationDepth = _Radius - dist;
-	outEvent.collisionPoint = closest;
+	outEvent.collisionNormal = worldNormal;
+	outEvent.penetrationDepth = sphereRadius - dist;
+	outEvent.collisionPoint = ToWorldNoScale(cylinderTransform, closest);
 	return true;
 }
 
 bool SphereCollider::CollideWithCapsule(const CapsuleCollider& capsule, CollisionEvent& outEvent) const
 {
-	const glm::vec3 c = capsule.GetPosition();
-	const float hs = capsule.GetSegmentHalfLength();
+	const Transform& capsuleTransform = capsule.GetTransform();
+	const glm::vec3 scale = GetAbsScale(capsuleTransform);
 
-	const float yOnSegment = Clamp(_Position.y, c.y - hs, c.y + hs);
-	const glm::vec3 closest(c.x, yOnSegment, c.z);
+	const float capsuleRadius = capsule.GetRadius() * std::max(scale.x, scale.z);
+	const float capsuleHalfHeight = (capsule.GetHeight() * 0.5f) * scale.y;
+	const float segmentHalf = std::max(0.0f, capsuleHalfHeight - capsuleRadius);
+	const float sphereRadius = _Radius * GetMaxAbsScale(_transform);
 
-	const glm::vec3 d = _Position - closest;
+	const glm::vec3 localSphere = ToLocalNoScale(capsuleTransform, _transform.getPosition());
+	const float yOnSegment = Clamp(localSphere.y, -segmentHalf, segmentHalf);
+	const glm::vec3 closest(0.0f, yOnSegment, 0.0f);
+
+	const glm::vec3 d = localSphere - closest;
 	const float distSq = glm::dot(d, d);
-	const float r = _Radius + capsule.GetRadius();
+	const float r = sphereRadius + capsuleRadius;
 	if (distSq > r * r)
 	{
 		return false;
 	}
 
 	const float dist = std::sqrt((distSq > 1e-8f) ? distSq : 1e-8f);
-	const glm::vec3 n = (dist > 1e-5f) ? (d / dist) : glm::vec3(0.0f, 1.0f, 0.0f);
+	const glm::vec3 localNormal = (dist > 1e-5f) ? (d / dist) : glm::vec3(0.0f, 1.0f, 0.0f);
+	const glm::vec3 worldNormal = glm::normalize(ToWorldDirNoScale(capsuleTransform, localNormal));
 
 	outEvent.isColliding = true;
-	outEvent.collisionNormal = n;
+	outEvent.collisionNormal = worldNormal;
 	outEvent.penetrationDepth = r - dist;
-	outEvent.collisionPoint = closest + n * capsule.GetRadius();
+	outEvent.collisionPoint = ToWorldNoScale(capsuleTransform, closest + localNormal * capsuleRadius);
 	return true;
 }

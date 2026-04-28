@@ -12,8 +12,7 @@ class SphereCollider : public Collider
 	float _Radius{ 0.5f };
 
 public:
-	SphereCollider(const glm::vec3& position, float radius) : _Radius(radius) { _Position = position; }
-	SphereCollider();
+	SphereCollider(const Transform& transform, float radius) : Collider(transform), _Radius(radius) {};
 
 	bool IsInside(const glm::vec3& point) const override;
 	bool Intersects(const Line& line) const override;

@@ -14,11 +14,9 @@ class CylinderCollider : public Collider
 
 public:
 	CylinderCollider() = default;
-	CylinderCollider(const glm::vec3& position, float radius, float height)
-		: _radius(radius), _height(height)
-	{
-		_Position = position;
-	}
+	CylinderCollider(const Transform& transform, float radius, float height)
+		: Collider(transform), _radius(radius), _height(height) {
+	};
 
 	glm::vec3 calculateLocalInertiaTensor(float mass) const override;
 	bool IsInside(const glm::vec3& point) const override;

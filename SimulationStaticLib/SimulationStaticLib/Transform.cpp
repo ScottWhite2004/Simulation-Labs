@@ -28,5 +28,5 @@ void Transform::setScale(const glm::vec3& scale)
 
 void Transform::setRotation(const glm::quat& rotation)
 {
-	_rotation = rotation;
+	_rotation = glm::normalize(rotation);
 }

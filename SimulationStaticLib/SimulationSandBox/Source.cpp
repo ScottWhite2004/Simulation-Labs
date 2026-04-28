@@ -115,6 +115,9 @@ private:
 
 	float simulationTimeAculator = 0.0f;
 
+    //Simulation Metrics
+    float renderInterpolationAlpha = 1.0f;
+
     //Camera controls
     float cameraMoveSpeed = 4.0f;
     float cameraLookSpeed = 1.8f;
@@ -343,7 +346,7 @@ void HelloTriangleApplication::initVulkan() {
 
 
     _worldObjectManager.addSphere(
-        "TestSphere2",
+        "Ball 1",
         glm::vec3(0.0f, 2.0f, 0.0f),
         glm::vec3(0.0f, 0.0f, 0.0f),
         glm::vec3(1.0f),
@@ -352,20 +355,6 @@ void HelloTriangleApplication::initVulkan() {
 		glm::vec3(0.1f, 0.0f, 0.0f),
         20.0f
 	);
-
-
-    _worldObjectManager.addSphere(
-        "TestSphere2",
-        glm::vec3(0.0f, 2.0f, 0.0f),
-        glm::vec3(0.0f, 0.0f, 0.0f),
-        glm::vec3(1.0f),
-        0.5f,
-        defaultMaterial,
-        glm::vec3(0.1f, 0.0f, 0.0f),
-        20.0f
-    );
-
-
 
     _worldObjectManager.addPlane(
         "GroundPlane",
@@ -456,7 +445,7 @@ void HelloTriangleApplication::drawWorldObjectUI()
         if (ImGui::DragFloat3("RigidBody Position", &rigidBodyPos.x, 0.05f)) {
             rigidBody->setPos(rigidBodyPos);
             if (collider != nullptr) {
-                collider->SetPosition(rigidBodyPos);
+                collider->GetTransform().setPosition(rigidBodyPos);
             }
             if (shape != nullptr) {
                 shape->setPosition(rigidBodyPos);
@@ -497,9 +486,9 @@ void HelloTriangleApplication::drawWorldObjectUI()
     }
 
     if (collider != nullptr) {
-        glm::vec3 colliderPos = collider->GetPosition();
+        glm::vec3 colliderPos = collider->GetTransform().getPosition();
         if (ImGui::DragFloat3("Collider Position", &colliderPos.x, 0.05f)) {
-            collider->SetPosition(colliderPos);
+            collider->GetTransform().setPosition(colliderPos);
             if (rigidBody != nullptr) {
                 rigidBody->setPos(colliderPos);
             }
@@ -521,7 +510,7 @@ void HelloTriangleApplication::drawWorldObjectUI()
                 rigidBody->setPos(renderPos);
             }
             if (collider != nullptr) {
-                collider->SetPosition(renderPos);
+                collider->GetTransform().setPosition(renderPos);
             }
         }
     }
@@ -694,7 +683,7 @@ void HelloTriangleApplication::cleanupImGui() {
 void HelloTriangleApplication::update(float seconds)
 {
 	_physicsWorld.step(seconds);
-    _worldObjectManager.syncWorldObjects();
+	_worldObjectManager.capturePhysicsState();
 }
 
 void HelloTriangleApplication::updateCameraControls(float dt)
@@ -766,7 +755,7 @@ void HelloTriangleApplication::updateCameraControls(float dt)
 void HelloTriangleApplication::mainLoop() {
     using clock = std::chrono::high_resolution_clock;
     auto previousTime = clock::now();
-    
+
     while (!glfwWindowShouldClose(_windowManager.getWindow())) {
         glfwPollEvents();
         auto currentTime = clock::now();
@@ -774,31 +763,40 @@ void HelloTriangleApplication::mainLoop() {
             std::chrono::duration<float>(currentTime - previousTime).count();
         previousTime = currentTime;
 
-		updateCameraControls(frameSeconds);
+        updateCameraControls(frameSeconds);
 
-        // If timestep is <= 0, treat as "no simulation stepping"
         float dt = simulationTimeStep > 0.0f ? simulationTimeStep : frameSeconds;
 
         if (simulationRunning && simulationTimeStep > 0.0f) {
-            // Fixed timestep with accumulator
             simulationTimeAculator += frameSeconds;
 
-            // Optionally clamp to avoid spiral of death after long pauses
             const float maxAccumulatedTime = simulationTimeStep * 8.0f;
             if (simulationTimeAculator > maxAccumulatedTime) {
                 simulationTimeAculator = maxAccumulatedTime;
             }
 
-            // Run simulation multiple times between renders
             while (simulationTimeAculator >= simulationTimeStep) {
                 update(simulationTimeStep);
                 simulationTimeAculator -= simulationTimeStep;
             }
+
+            renderInterpolationAlpha = simulationTimeAculator / simulationTimeStep;
         }
         else if (simulationRunning && simulationTimeStep <= 0.0f) {
-            // Fallback: variable timestep update
             update(dt);
+            renderInterpolationAlpha = 1.0f;
         }
+        else {
+            renderInterpolationAlpha = 1.0f;
+        }
+
+        if (renderInterpolationAlpha < 0.0f) {
+            renderInterpolationAlpha = 0.0f;
+        }
+        if (renderInterpolationAlpha > 1.0f) {
+            renderInterpolationAlpha = 1.0f;
+        }
+
         drawFrame();
     }
     vkDeviceWaitIdle(_vulkanContext.getDevice());
@@ -1016,6 +1014,7 @@ void HelloTriangleApplication::drawFrame() {
 	_syncManager.markImageInFlight(imageIndex, currentFrame);
 	_syncManager.resetFrameFence(currentFrame);
 
+	_worldObjectManager.applyInterpolation(renderInterpolationAlpha);
     updateUniformBuffer(currentFrame);
 
     // Start ImGui frame

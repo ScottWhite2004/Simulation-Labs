@@ -119,7 +119,7 @@ public:
 				}
 				delete obj->getRigidBody();
 			}
-			if(obj->getCollider()) {
+			if (obj->getCollider()) {
 				delete obj->getCollider();
 			}
 			delete obj;
@@ -136,8 +136,24 @@ public:
 				const glm::quat rotationQuat = glm::normalize(obj->getShape()->getRot());
 				model = model * glm::mat4_cast(rotationQuat);
 
+				model = glm::scale(model, obj->getShape()->getScale());
+
 				obj->getShape()->updateUniformBuffer(frameIndex, model, view, proj);
 			}
 		}
 	}
+
+	void capturePhysicsState() {
+		for (WorldObject* obj : _worldObjects) {
+			obj->capturePhysicsState();
+		}
+	}
+
+	void applyInterpolation(float alpha)
+	{
+		for (WorldObject* obj : _worldObjects) {
+			obj->applyInterpolatedTransform(alpha);
+		}
+	}
+
 };

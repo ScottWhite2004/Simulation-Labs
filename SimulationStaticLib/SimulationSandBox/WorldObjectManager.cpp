@@ -49,7 +49,8 @@ WorldObject* WorldObjectManager::addSphere(
 	Shape* shape = new Sphere(position, rotation, scale, material, radius);
 	WorldObject* worldObject = createWorldObject(name, shape, position, rotation, velocity, mass);
 
-	Collider* collider = new SphereCollider(position, radius);
+	Transform colliderTransform(position, scale, glm::quat(rotation));
+	Collider* collider = new SphereCollider(colliderTransform, radius);
 	worldObject->addCollider(collider);
 	worldObject->getRigidBody()->SetCollider(collider);
 	worldObject->getRigidBody()->CalculateInertia();
@@ -72,7 +73,8 @@ WorldObject* WorldObjectManager::addCuboid(
 	Shape* shape = new Cuboid(position, rotation, scale, material, width, height, depth);
 	WorldObject* worldObject = createWorldObject(name, shape, position, rotation, velocity, mass);
 
-	Collider* collider = new CuboidCollider(position, width, height, depth);
+	Transform colliderTransform(position, scale, glm::quat(rotation));
+	Collider* collider = new CuboidCollider(colliderTransform, width, height, depth);
 	worldObject->addCollider(collider);
 	worldObject->getRigidBody()->SetCollider(collider);
 	worldObject->getRigidBody()->CalculateInertia();
@@ -94,12 +96,12 @@ WorldObject* WorldObjectManager::addPlane(
 	Shape* shape = new Plane(position, rotation, scale, material, width, depth);
 	WorldObject* worldObject = createWorldObject(name, shape, position, rotation, velocity, mass);
 
+	Transform colliderTransform(position, scale, glm::quat(rotation));
 	const glm::vec3 normal = glm::normalize(glm::quat(rotation) * glm::vec3(0.0f, 1.0f, 0.0f));
-	Collider* collider = new PlaneCollider(position, normal);
+	Collider* collider = new PlaneCollider(colliderTransform, normal);
 	worldObject->addCollider(collider);
 	worldObject->getRigidBody()->SetCollider(collider);
 
-	// planes are usually static
 	worldObject->getRigidBody()->SetStatic(true);
 
 	return worldObject;
@@ -120,7 +122,8 @@ WorldObject* WorldObjectManager::addCylinder(
 	Shape* shape = new Cylinder(position, rotation, scale, material, radius, height, segments);
 	WorldObject* worldObject = createWorldObject(name, shape, position, rotation, velocity, mass);
 
-	Collider* collider = new CylinderCollider(position, radius, height);
+	Transform colliderTransform(position, scale, glm::quat(rotation));
+	Collider* collider = new CylinderCollider(colliderTransform, radius, height);
 	worldObject->addCollider(collider);
 	worldObject->getRigidBody()->SetCollider(collider);
 	worldObject->getRigidBody()->CalculateInertia();
@@ -142,7 +145,8 @@ WorldObject* WorldObjectManager::addCapsule(
 	Shape* shape = new Capsule(position, rotation, scale, material, radius, height);
 	WorldObject* worldObject = createWorldObject(name, shape, position, rotation, velocity, mass);
 
-	Collider* collider = new CapsuleCollider(position, radius, height);
+	Transform colliderTransform(position, scale, glm::quat(rotation));
+	Collider* collider = new CapsuleCollider(colliderTransform, radius, height);
 	worldObject->addCollider(collider);
 	worldObject->getRigidBody()->SetCollider(collider);
 	worldObject->getRigidBody()->CalculateInertia();

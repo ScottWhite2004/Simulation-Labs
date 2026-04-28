@@ -23,6 +23,7 @@ public:
 	void IntegrateEuler(float seconds) override;
 	void IntegrateSemiImplicitEuler(float seconds) override;
 	void CalculateInertia();
+	void clearForces() override;
 	
 	//Getters
  glm::vec3 getPos() const { return _transform.getPosition(); }

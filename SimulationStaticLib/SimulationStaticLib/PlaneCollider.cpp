@@ -4,11 +4,12 @@
 #include "CuboidCollider.h"
 #include "CylinderCollider.h"
 #include "CapsuleCollider.h"
+#include <algorithm>
 #include <cmath>
 
 bool PlaneCollider::IsInside(const glm::vec3& point) const
 {
-	const float d = glm::dot(glm::normalize(_Normal), point - _Position);
+	const float d = glm::dot(glm::normalize(_Normal), point - _transform.getPosition());
 	return d <= 0.0f;
 }
 
@@ -20,7 +21,7 @@ bool PlaneCollider::Intersects(const Line&) const
 float PlaneCollider::ShortestDistanceToPoint(const glm::vec3& point) const
 {
 	const glm::vec3 n = glm::normalize(_Normal);
-	return std::fabs(glm::dot(n, point - _Position));
+	return std::fabs(glm::dot(n, point - _transform.getPosition()));
 }
 
 glm::vec3 PlaneCollider::calculateLocalInertiaTensor(float) const
@@ -35,11 +36,12 @@ bool PlaneCollider::Collide(const Collider& other, CollisionEvent& outEvent) con
 
 bool PlaneCollider::CollideWithSphere(const SphereCollider& sphere, CollisionEvent& outEvent) const
 {
-	const glm::vec3 n = glm::normalize(_Normal);
-	const float signedDistance = glm::dot(n, sphere.GetPosition() - _Position);
+	const glm::vec3 n = glm::normalize(ToWorldDirNoScale(_transform, _Normal));
+	const float sphereRadius = sphere.GetRadius() * GetMaxAbsScale(sphere.GetTransform());
+	const float signedDistance = glm::dot(n, sphere.GetTransform().getPosition() - _transform.getPosition());
 	const float absDistance = std::fabs(signedDistance);
 
-	if (absDistance > sphere.GetRadius())
+	if (absDistance > sphereRadius)
 	{
 		return false;
 	}
@@ -48,8 +50,8 @@ bool PlaneCollider::CollideWithSphere(const SphereCollider& sphere, CollisionEve
 
 	outEvent.isColliding = true;
 	outEvent.collisionNormal = normal;
-	outEvent.penetrationDepth = sphere.GetRadius() - absDistance;
-	outEvent.collisionPoint = sphere.GetPosition() - normal * sphere.GetRadius();
+	outEvent.penetrationDepth = sphereRadius - absDistance;
+	outEvent.collisionPoint = sphere.GetTransform().getPosition() - normal * sphereRadius;
 	return true;
 }
 
@@ -60,10 +62,20 @@ bool PlaneCollider::CollideWithPlane(const PlaneCollider&, CollisionEvent&) cons
 
 bool PlaneCollider::CollideWithCuboid(const CuboidCollider& cuboid, CollisionEvent& outEvent) const
 {
-	const glm::vec3 n = glm::normalize(_Normal);
-	const glm::vec3 h = cuboid.GetHalfExtents();
-	const float projectedRadius = h.x * std::fabs(n.x) + h.y * std::fabs(n.y) + h.z * std::fabs(n.z);
-	const float signedDistance = glm::dot(n, cuboid.GetPosition() - _Position);
+	const glm::vec3 n = glm::normalize(ToWorldDirNoScale(_transform, _Normal));
+	const Transform& cuboidTransform = cuboid.GetTransform();
+	const glm::vec3 halfExtents = cuboid.GetHalfExtents() * GetAbsScale(cuboidTransform);
+
+	const glm::vec3 axisX = glm::normalize(ToWorldDirNoScale(cuboidTransform, glm::vec3(1.0f, 0.0f, 0.0f)));
+	const glm::vec3 axisY = glm::normalize(ToWorldDirNoScale(cuboidTransform, glm::vec3(0.0f, 1.0f, 0.0f)));
+	const glm::vec3 axisZ = glm::normalize(ToWorldDirNoScale(cuboidTransform, glm::vec3(0.0f, 0.0f, 1.0f)));
+
+	const float projectedRadius =
+		halfExtents.x * std::fabs(glm::dot(n, axisX)) +
+		halfExtents.y * std::fabs(glm::dot(n, axisY)) +
+		halfExtents.z * std::fabs(glm::dot(n, axisZ));
+
+	const float signedDistance = glm::dot(n, cuboidTransform.getPosition() - _transform.getPosition());
 	const float absDistance = std::fabs(signedDistance);
 
 	if (absDistance > projectedRadius)
@@ -76,18 +88,25 @@ bool PlaneCollider::CollideWithCuboid(const CuboidCollider& cuboid, CollisionEve
 	outEvent.isColliding = true;
 	outEvent.collisionNormal = normal;
 	outEvent.penetrationDepth = projectedRadius - absDistance;
-	outEvent.collisionPoint = cuboid.GetPosition() - normal * absDistance;
+	outEvent.collisionPoint = cuboidTransform.getPosition() - normal * absDistance;
 	return true;
 }
 
 bool PlaneCollider::CollideWithCylinder(const CylinderCollider& cylinder, CollisionEvent& outEvent) const
 {
-	const glm::vec3 n = glm::normalize(_Normal);
-	const float projectedRadius =
-		cylinder.GetRadius() * std::sqrt((n.x * n.x) + (n.z * n.z)) +
-		cylinder.GetHalfHeight() * std::fabs(n.y);
+	const glm::vec3 n = glm::normalize(ToWorldDirNoScale(_transform, _Normal));
+	const Transform& cylinderTransform = cylinder.GetTransform();
+	const glm::vec3 localNormal = ToLocalDirNoScale(cylinderTransform, n);
+	const glm::vec3 scale = GetAbsScale(cylinderTransform);
 
-	const float signedDistance = glm::dot(n, cylinder.GetPosition() - _Position);
+	const float radius = cylinder.GetRadius() * std::max(scale.x, scale.z);
+	const float halfHeight = (cylinder.GetHeight() * 0.5f) * scale.y;
+
+	const float projectedRadius =
+		radius * std::sqrt((localNormal.x * localNormal.x) + (localNormal.z * localNormal.z)) +
+		halfHeight * std::fabs(localNormal.y);
+
+	const float signedDistance = glm::dot(n, cylinderTransform.getPosition() - _transform.getPosition());
 	const float absDistance = std::fabs(signedDistance);
 
 	if (absDistance > projectedRadius)
@@ -100,15 +119,24 @@ bool PlaneCollider::CollideWithCylinder(const CylinderCollider& cylinder, Collis
 	outEvent.isColliding = true;
 	outEvent.collisionNormal = normal;
 	outEvent.penetrationDepth = projectedRadius - absDistance;
-	outEvent.collisionPoint = cylinder.GetPosition() - normal * absDistance;
+	outEvent.collisionPoint = cylinderTransform.getPosition() - normal * absDistance;
 	return true;
 }
 
 bool PlaneCollider::CollideWithCapsule(const CapsuleCollider& capsule, CollisionEvent& outEvent) const
 {
-	const glm::vec3 n = glm::normalize(_Normal);
-	const float projectedRadius = capsule.GetSegmentHalfLength() * std::fabs(n.y) + capsule.GetRadius();
-	const float signedDistance = glm::dot(n, capsule.GetPosition() - _Position);
+	const glm::vec3 n = glm::normalize(ToWorldDirNoScale(_transform, _Normal));
+	const Transform& capsuleTransform = capsule.GetTransform();
+	const glm::vec3 localNormal = ToLocalDirNoScale(capsuleTransform, n);
+	const glm::vec3 scale = GetAbsScale(capsuleTransform);
+
+	const float radius = capsule.GetRadius() * std::max(scale.x, scale.z);
+	const float halfHeight = (capsule.GetHeight() * 0.5f) * scale.y;
+	const float segmentHalf = std::max(0.0f, halfHeight - radius);
+
+	const float projectedRadius = segmentHalf * std::fabs(localNormal.y) + radius;
+
+	const float signedDistance = glm::dot(n, capsuleTransform.getPosition() - _transform.getPosition());
 	const float absDistance = std::fabs(signedDistance);
 
 	if (absDistance > projectedRadius)
@@ -121,6 +149,6 @@ bool PlaneCollider::CollideWithCapsule(const CapsuleCollider& capsule, Collision
 	outEvent.isColliding = true;
 	outEvent.collisionNormal = normal;
 	outEvent.penetrationDepth = projectedRadius - absDistance;
-	outEvent.collisionPoint = capsule.GetPosition() - normal * absDistance;
+	outEvent.collisionPoint = capsuleTransform.getPosition() - normal * absDistance;
 	return true;
 }
