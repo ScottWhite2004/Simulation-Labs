@@ -29,6 +29,7 @@
 #include <array>
 #include <optional>
 #include <set>
+#include <cmath>
 
 //Created Class Includes
 #include "CameraManager.h"
@@ -355,6 +356,17 @@ void HelloTriangleApplication::initVulkan() {
 		glm::vec3(0.1f, 0.0f, 0.0f),
         20.0f
 	);
+
+    _worldObjectManager.addSphere(
+        "Ball 2",
+        glm::vec3(0.0f, 2.0f, 0.0f),
+        glm::vec3(0.0f, 0.0f, 0.0f),
+        glm::vec3(1.0f),
+        0.5f,
+        defaultMaterial,
+        glm::vec3(0.1f, 0.0f, 0.0f),
+        20.0f
+    );
 
     _worldObjectManager.addPlane(
         "GroundPlane",
@@ -775,12 +787,20 @@ void HelloTriangleApplication::mainLoop() {
                 simulationTimeAculator = maxAccumulatedTime;
             }
 
-            while (simulationTimeAculator >= simulationTimeStep) {
-                update(simulationTimeStep);
-                simulationTimeAculator -= simulationTimeStep;
+            const float maxSubstep = 1.0f / 120.0f;
+            const float fixedStep = simulationTimeStep;
+            const int subSteps = std::max(1, static_cast<int>(std::ceil(fixedStep / maxSubstep)));
+            const float subStep = fixedStep / static_cast<float>(subSteps);
+
+            while (simulationTimeAculator >= fixedStep) {
+                for (int step = 0; step < subSteps; ++step) {
+                    _physicsWorld.step(subStep);
+                }
+                _worldObjectManager.capturePhysicsState();
+                simulationTimeAculator -= fixedStep;
             }
 
-            renderInterpolationAlpha = simulationTimeAculator / simulationTimeStep;
+            renderInterpolationAlpha = simulationTimeAculator / fixedStep;
         }
         else if (simulationRunning && simulationTimeStep <= 0.0f) {
             update(dt);

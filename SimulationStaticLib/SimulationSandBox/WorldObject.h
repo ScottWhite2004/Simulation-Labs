@@ -66,7 +66,7 @@ public:
 			return;
 		}
 
-		if(!_hasInterpolationState)
+		if (!_hasInterpolationState)
 		{
 			syncTransform();
 			return;
@@ -75,9 +75,16 @@ public:
 		const glm::vec3 interpolatedPos = glm::mix(_previousTransform.getPosition(), _currentTransform.getPosition(), alpha);
 		const glm::quat interpolatedRot = glm::slerp(_previousTransform.getRotation(), _currentTransform.getRotation(), alpha);
 		const glm::vec3 interpolatedScale = glm::mix(_previousTransform.getScale(), _currentTransform.getScale(), alpha);
+
 		_shape->setPosition(interpolatedPos);
 		_shape->setRotation(interpolatedRot);
 		_shape->setScale(interpolatedScale);
+
+		if (_collider)
+		{
+			const Transform interpolatedTransform(interpolatedPos, interpolatedScale, interpolatedRot);
+			_collider->SetTransform(interpolatedTransform);
+		}
 	}
 };
 
