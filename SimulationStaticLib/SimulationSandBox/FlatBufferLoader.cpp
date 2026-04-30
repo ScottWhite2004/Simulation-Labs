@@ -44,11 +44,8 @@ bool FlatBufferLoader::loadSceneFromFile(const std::string& path, Scene& scene)
 	file.read(reinterpret_cast<char*>(buffer.data()), size);
 
 	flatbuffers::Verifier verifier(buffer.data(), buffer.size());
-	if (!Simulation::VerifySceneBuffer(verifier))
+	if (!Simulation::VerifySizePrefixedSceneBuffer(verifier))
 	{
-		std::cerr << "[FlatBufferLoader] VerifySceneBuffer failed for '" << path
-			<< "' (size=" << buffer.size()
-			<< ", head=" << DumpHex(buffer, 16) << ")\n";
 		return false;
 	}
 

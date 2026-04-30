@@ -255,10 +255,10 @@ void HelloTriangleApplication::run() {
 }
 
 void HelloTriangleApplication::initVulkan() {
-    
-	_vulkanContext.initializeContext(_windowManager.getWindow());
-	_swapChainManager.initialize(&_vulkanContext, &_windowManager);
-	_swapChainManager.createSwapChain();
+
+    _vulkanContext.initializeContext(_windowManager.getWindow());
+    _swapChainManager.initialize(&_vulkanContext, &_windowManager);
+    _swapChainManager.createSwapChain();
     _swapChainManager.createImageViews();
 
 
@@ -275,8 +275,8 @@ void HelloTriangleApplication::initVulkan() {
         aspect,
         0.1f,
         300.0f,
-		10.0f,
-		ProjectionType::Perspective
+        10.0f,
+        ProjectionType::Perspective
     );
 
     orthographicCamera = Camera(
@@ -286,21 +286,21 @@ void HelloTriangleApplication::initVulkan() {
         90.0f,
         aspect,
         0.1f,
-		300.0f,
-		10.0f,
+        300.0f,
+        10.0f,
         ProjectionType::Orthographic
-	);
+    );
 
-    
 
-    _cameraManager.addCamera("Perspective",perspectiveCamera);
-	_cameraManager.addCamera("Orthographic", orthographicCamera);
+
+    _cameraManager.addCamera("Perspective", perspectiveCamera);
+    _cameraManager.addCamera("Orthographic", orthographicCamera);
     _cameraManager.switchToCamera("Perspective"); // Make the first camera active
     // ---------------------------------------------
 
-	_renderPassManager.initialize(&_vulkanContext, &_swapChainManager);
-	_renderPassManager.createRenderPass();
-	_pipelineManager.initialize(&_vulkanContext, &_renderPassManager, &_swapChainManager);
+    _renderPassManager.initialize(&_vulkanContext, &_swapChainManager);
+    _renderPassManager.createRenderPass();
+    _pipelineManager.initialize(&_vulkanContext, &_renderPassManager, &_swapChainManager);
 
     VkDescriptorSetLayoutBinding uboBinding{};
     uboBinding.binding = 0;
@@ -329,28 +329,89 @@ void HelloTriangleApplication::initVulkan() {
     layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
     layoutInfo.pBindings = bindings.data();
 
-	_vulkanContext.createDescriptorSetLayout(layoutInfo);
+    _vulkanContext.createDescriptorSetLayout(layoutInfo);
 
     std::vector<VkDescriptorSetLayout> setLayouts;
-	setLayouts.push_back(_vulkanContext.getDescriptorSetLayout());
+    setLayouts.push_back(_vulkanContext.getDescriptorSetLayout());
     _pipelineManager.createPipelineLayout(setLayouts);
-    
-	_imageHelper = Image(_vulkanContext.getDevice(), _vulkanContext.getPhysicalDevice(), _vulkanContext.getCommandPool(), _vulkanContext.getGraphicsQueue());
 
-    
+    _imageHelper = Image(_vulkanContext.getDevice(), _vulkanContext.getPhysicalDevice(), _vulkanContext.getCommandPool(), _vulkanContext.getGraphicsQueue());
+
+
 
     createGraphicsPipeline();
-	_vulkanContext.createCommandPool();
+    _vulkanContext.createCommandPool();
     _texManager.initialize(_vulkanContext.getDevice(), _vulkanContext.getPhysicalDevice(), _vulkanContext.getCommandPool(), _vulkanContext.getGraphicsQueue());
     _texManager.addTexture("default", "textures/Default.png");
-	createDepthResources();
-	_swapChainManager.createFramebuffers(_renderPassManager.getRenderPass(),depthImageView);
-	_syncManager.initialize(&_vulkanContext, &_swapChainManager, MAX_FRAMES_IN_FLIGHT);
-	Material defaultMaterial = Material(glm::vec4(1.0f), 0.0f, 1.0f, _texManager.getTexture("default"));
-    
-    if(loader.loadSceneFromFile("scenes/newtonsCradle.bin", scene)) {
-		scene.createWorldObjects(_worldObjectManager, defaultMaterial);
-	}
+    createDepthResources();
+    _swapChainManager.createFramebuffers(_renderPassManager.getRenderPass(), depthImageView);
+    _syncManager.initialize(&_vulkanContext, &_swapChainManager, MAX_FRAMES_IN_FLIGHT);
+    Material defaultMaterial = Material(glm::vec4(1.0f), 0.0f, 1.0f, _texManager.getTexture("default"));
+
+       if(loader.loadSceneFromFile("scenes/newtonsCradle.bin", scene)) {
+       	scene.createWorldObjects(_worldObjectManager, defaultMaterial);
+       }
+
+    _worldObjectManager.addPlane(
+        "Ground",
+        glm::vec3(0.0f, -1.0f, 0.0f),
+        glm::vec3(0.0f),
+        glm::vec3(1.0f),
+        10.0f,
+        10.0f,
+        defaultMaterial,
+        glm::vec3(0.0f),
+        0.0f
+    );
+
+    _worldObjectManager.addSphere(
+        "Ball1",
+        glm::vec3(-2.0f, 0.0f, 0.0f),
+        glm::vec3(0.0f),
+        glm::vec3(1.0f),
+        0.5f,
+        defaultMaterial,
+        glm::vec3(0.0f),
+        1.0f
+    );
+
+    _worldObjectManager.addSphere(
+        "Ball2",
+        glm::vec3(0.0f, 0.0f, 0.0f),
+        glm::vec3(0.0f),
+        glm::vec3(1.0f),
+        0.5f,
+        defaultMaterial,
+        glm::vec3(0.0f),
+        1.0f
+	);
+
+    _worldObjectManager.addCylinder(
+        "Pendulum Rod",
+        glm::vec3(-1.0f, 0.0f, 0.0f),
+        glm::vec3(0.0f),
+        glm::vec3(1.0f),
+        0.5f,
+        2.0f,
+        defaultMaterial,
+        36,
+        glm::vec3(0.0f),
+        1.0f
+    );
+
+    _worldObjectManager.addCapsule(
+        "Capsule",
+        glm::vec3(1.0f, 0.0f, 0.0f),
+        glm::vec3(0.0f),
+        glm::vec3(4.0f),
+        0.5f,
+        3.0f,
+        defaultMaterial,
+        glm::vec3(0.0f),
+        1.0f
+	);
+
+
 
 
 
