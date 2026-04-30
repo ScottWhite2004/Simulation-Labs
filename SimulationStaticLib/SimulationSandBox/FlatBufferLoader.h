@@ -1,6 +1,7 @@
 #pragma once
 #include "Scene.h"
 #include "Scene_generated.h"
+#include "glm/glm.hpp"
 #include "glm/gtc/quaternion.hpp"
 #include "RotationEuler.h"
 #include "Transform.h"
@@ -12,6 +13,7 @@
 
 class FlatBufferLoader
 {
+private:
 	glm::vec3 ToVec3(const Simulation::Vec3& value)
 	{
 		return glm::vec3(value.x(), value.y(), value.z());
@@ -193,7 +195,7 @@ class FlatBufferLoader
 		glm::vec3 position(0.0f);
 		glm::quat rotation(1.0f, 0.0f, 0.0f, 0.0f);
 
-		if(const Simulation::Transform* transform = camera.transform())
+		if (const Simulation::Transform* transform = camera.transform())
 		{
 			position = ToVec3(transform->position());
 

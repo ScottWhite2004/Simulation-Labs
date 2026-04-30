@@ -1,13 +1,38 @@
 #include "FlatBufferLoader.h"
+#include <algorithm>
+#include <iomanip>
+#include <iostream>
+#include <sstream>
+
+namespace
+{
+	std::string DumpHex(const std::vector<uint8_t>& buffer, size_t maxBytes)
+	{
+		std::ostringstream stream;
+		const size_t count = std::min(maxBytes, buffer.size());
+
+		stream << std::hex << std::setfill('0');
+		for (size_t i = 0; i < count; ++i)
+		{
+			stream << std::setw(2) << static_cast<int>(buffer[i]);
+			if (i + 1 < count)
+			{
+				stream << " ";
+			}
+		}
+
+		return stream.str();
+	}
+}
 
 bool FlatBufferLoader::loadSceneFromFile(const std::string& path, Scene& scene)
 {
 	std::ifstream file(path, std::ios::binary | std::ios::ate);
-	if(!file.is_open())
+	if (!file.is_open())
 	{
 		return false;
 	}
-	
+
 	const std::streamsize size = file.tellg();
 	if (size <= 0)
 	{
@@ -21,11 +46,14 @@ bool FlatBufferLoader::loadSceneFromFile(const std::string& path, Scene& scene)
 	flatbuffers::Verifier verifier(buffer.data(), buffer.size());
 	if (!Simulation::VerifySceneBuffer(verifier))
 	{
+		std::cerr << "[FlatBufferLoader] VerifySceneBuffer failed for '" << path
+			<< "' (size=" << buffer.size()
+			<< ", head=" << DumpHex(buffer, 16) << ")\n";
 		return false;
 	}
 
 	const Simulation::Scene* loadedScene = Simulation::GetScene(buffer.data());
-	if(!loadedScene)
+	if (!loadedScene)
 	{
 		return false;
 	}
@@ -63,6 +91,7 @@ bool FlatBufferLoader::loadSceneFromFile(const std::string& path, Scene& scene)
 			switch (type)
 			{
 			case Simulation::SpawnerType_SphereSpawner:
+			{
 				const Simulation::SphereSpawner* fb = reinterpret_cast<const Simulation::SphereSpawner*>(spawnerData->Get(i));
 				if (fb && fb->base())
 				{
@@ -73,6 +102,7 @@ bool FlatBufferLoader::loadSceneFromFile(const std::string& path, Scene& scene)
 					}
 				}
 				break;
+			}
 			case Simulation::SpawnerType_CylinderSpawner:
 			{
 				const Simulation::CylinderSpawner* fb = reinterpret_cast<const Simulation::CylinderSpawner*>(spawnerData->Get(i));
@@ -123,6 +153,7 @@ bool FlatBufferLoader::loadSceneFromFile(const std::string& path, Scene& scene)
 			default:
 				break;
 			}
+
 			scene.spawners.push_back(spawner);
 		}
 	}
@@ -147,5 +178,6 @@ bool FlatBufferLoader::loadSceneFromFile(const std::string& path, Scene& scene)
 			scene.interactions.push_back(loaded);
 		}
 	}
+
 	return true;
 }

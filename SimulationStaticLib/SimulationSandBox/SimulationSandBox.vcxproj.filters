@@ -375,4 +375,7 @@
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\Scene.fbs" />
+  </ItemGroup>
 </Project>

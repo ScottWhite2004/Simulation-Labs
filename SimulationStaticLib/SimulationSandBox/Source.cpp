@@ -55,6 +55,8 @@
 #include "WorldObject.h"
 #include "WorldObjectManager.h"
 #include "Capsule.h"
+#include "Scene.h"
+#include "FlatBufferLoader.h"
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
 
@@ -76,7 +78,7 @@ class HelloTriangleApplication {
 public:
     HelloTriangleApplication()
         : _clearScenario(&uiClearColour)
-		, _selectedScenario(_clearScenario), _physicsWorld(gravity), _worldObjectManager(&_physicsWorld)
+		, _physicsWorld(gravity), _worldObjectManager(&_physicsWorld)
     {
     }
 
@@ -123,8 +125,9 @@ private:
     float cameraMoveSpeed = 4.0f;
     float cameraLookSpeed = 1.8f;
 
-    //Scenario Management
-    Scenario _selectedScenario;
+    //Scene loader from flat buffers
+	Scene scene;
+    FlatBufferLoader loader;
 
     //Depth Resources
 	VkImage depthImage = VK_NULL_HANDLE;
@@ -344,41 +347,12 @@ void HelloTriangleApplication::initVulkan() {
 	_swapChainManager.createFramebuffers(_renderPassManager.getRenderPass(),depthImageView);
 	_syncManager.initialize(&_vulkanContext, &_swapChainManager, MAX_FRAMES_IN_FLIGHT);
 	Material defaultMaterial = Material(glm::vec4(1.0f), 0.0f, 1.0f, _texManager.getTexture("default"));
+    
+    if(loader.loadSceneFromFile("scenes/newtonsCradle.bin", scene)) {
+		scene.createWorldObjects(_worldObjectManager, defaultMaterial);
+	}
 
 
-    _worldObjectManager.addSphere(
-        "Ball 1",
-        glm::vec3(0.0f, 2.0f, 0.0f),
-        glm::vec3(0.0f, 0.0f, 0.0f),
-        glm::vec3(1.0f),
-        0.5f,
-        defaultMaterial,
-		glm::vec3(0.1f, 0.0f, 0.0f),
-        20.0f
-	);
-
-    _worldObjectManager.addSphere(
-        "Ball 2",
-        glm::vec3(0.0f, 2.0f, 0.0f),
-        glm::vec3(0.0f, 0.0f, 0.0f),
-        glm::vec3(1.0f),
-        0.5f,
-        defaultMaterial,
-        glm::vec3(0.1f, 0.0f, 0.0f),
-        20.0f
-    );
-
-    _worldObjectManager.addPlane(
-        "GroundPlane",
-        glm::vec3(0.0f, -1.0f, 0.0f),
-        glm::vec3(0.0f, 0.0f, 0.0f),
-        glm::vec3(10.0f, 1.0f, 10.0f),
-        10.0f,
-        10.0f,
-        defaultMaterial,
-		glm::vec3(0.0f, 0.0f, 0.0f),
-        1.0f
-	);
 
 	_physicsWorld.setGravity(gravity);
 
@@ -409,7 +383,6 @@ void HelloTriangleApplication::initVulkan() {
     createCommandBuffers();
     initImGui();
 
-	_selectedScenario.OnLoad();
 }
 
 void HelloTriangleApplication::drawWorldObjectUI()
@@ -1046,27 +1019,9 @@ void HelloTriangleApplication::drawFrame() {
     {
         if (ImGui::BeginMenu("Scenario"))
         {
-            if (ImGui::MenuItem("Clear Colour Scenario"))
-            {
-				_selectedScenario.OnUnload();
-                _selectedScenario = _clearScenario;
-				_selectedScenario.OnLoad();
-            }
-            if (ImGui::MenuItem("Angular Displacement"))
-            {
-                _selectedScenario.OnUnload();
-                _selectedScenario = _angularDisplacementScenario;
-                _selectedScenario.OnLoad();
-            }
-            if (ImGui::MenuItem("Angular Velocity"))
-            {
-                _selectedScenario.OnUnload();
-                _selectedScenario = _angularVelocityScenario;
-                _selectedScenario.OnLoad();
-            }
+
 			ImGui::EndMenu();
         }
-        _selectedScenario.ImGuiMain();
 
         if (ImGui::BeginMenu("Colour"))
         {
