@@ -5,15 +5,35 @@
 #include "Collider.h"
 #include "Transform.h"
 #include <string>
+
+enum class CollisionType
+{ 
+	SOLID,
+	CONTAINER
+
+};
+
+enum class Behaviour
+{
+	StaticObject,
+	AnimatedObject,
+	SimulatedObject
+};
+
 class WorldObject
 {
-	std::string _name;
 	Collider* _collider{ nullptr };
 	RigidBody* _rigidBody{ nullptr };
-	Shape* _shape{ nullptr };
 
+
+	std::string _name;
 	Transform _currentTransform;
 	Transform _previousTransform;
+	std::string material;
+	Behaviour behaviour;
+	CollisionType collision_type = CollisionType::SOLID;
+	Shape* _shape{ nullptr };
+
 	bool _hasInterpolationState = false;
 
 public:
