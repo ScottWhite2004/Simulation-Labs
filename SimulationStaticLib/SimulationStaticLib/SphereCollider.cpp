@@ -17,8 +17,9 @@ namespace
 
 bool SphereCollider::IsInside(const glm::vec3& point) const
 {
+	const float scaledRadius = _Radius * GetMaxAbsScale(_transform);
 	const glm::vec3 d = point - _transform.getPosition();
-	return glm::dot(d, d) <= (_Radius * _Radius);
+	return glm::dot(d, d) <= (scaledRadius * scaledRadius);
 }
 
 bool SphereCollider::Intersects(const Line& line) const
@@ -45,6 +46,28 @@ bool SphereCollider::CollideWithSphere(const SphereCollider& sphere, CollisionEv
 	const glm::vec3 delta = sphere.GetTransform().getPosition() - _transform.getPosition();
 	const float distSq = glm::dot(delta, delta);
 	const float r = radiusA + radiusB;
+
+	if (IsContainer() && distSq > r * r)
+	{
+		outEvent.isColliding = true;
+
+		const float dist = std::sqrt((distSq > 1e-8f) ? distSq : 1e-8f);
+		const glm::vec3 n = (dist > 1e-5f)
+			? (delta / dist)
+			: glm::vec3(1.0f, 0.0f, 0.0f);
+
+		// Push inward
+		outEvent.collisionNormal = -n;
+
+		// amount outside container
+		outEvent.penetrationDepth = dist - r;
+
+		// point on boundary wall
+		outEvent.collisionPoint = _transform.getPosition() + n * r;
+
+		return true;
+	}
+
 	if (distSq > r * r)
 	{
 		return false;
@@ -79,6 +102,32 @@ bool SphereCollider::CollideWithCuboid(const CuboidCollider& cuboid, CollisionEv
 
 	const glm::vec3 d = localCenter - closest;
 	const float distSq = glm::dot(d, d);
+	if (IsContainer() && distSq > sphereRadius * sphereRadius)
+	{
+		outEvent.isColliding = true;
+
+		const float dist = std::sqrt((distSq > 1e-8f) ? distSq : 1e-8f);
+
+		const glm::vec3 localNormal =
+			(dist > 1e-5f)
+			? (d / dist)
+			: glm::vec3(0.0f, 1.0f, 0.0f);
+
+		const glm::vec3 worldNormal =
+			glm::normalize(ToWorldDirNoScale(cuboidTransform, localNormal));
+
+		// Push back inward
+		outEvent.collisionNormal = -worldNormal;
+
+		// amount outside
+		outEvent.penetrationDepth = dist - sphereRadius;
+
+		// point on box surface
+		outEvent.collisionPoint = ToWorldNoScale(cuboidTransform, closest);
+
+		return true;
+	}
+
 	if (distSq > sphereRadius * sphereRadius)
 	{
 		return false;
@@ -89,7 +138,7 @@ bool SphereCollider::CollideWithCuboid(const CuboidCollider& cuboid, CollisionEv
 	const glm::vec3 worldNormal = glm::normalize(ToWorldDirNoScale(cuboidTransform, localNormal));
 
 	outEvent.isColliding = true;
-	outEvent.collisionNormal = worldNormal;
+	outEvent.collisionNormal = -worldNormal;
 	outEvent.penetrationDepth = sphereRadius - dist;
 	outEvent.collisionPoint = ToWorldNoScale(cuboidTransform, closest);
 	return true;
@@ -118,6 +167,32 @@ bool SphereCollider::CollideWithCylinder(const CylinderCollider& cylinder, Colli
 	const glm::vec3 closest(v.x, closestY, v.y);
 	const glm::vec3 d = localSphere - closest;
 	const float distSq = glm::dot(d, d);
+	if (IsContainer() && distSq > sphereRadius * sphereRadius)
+	{
+		outEvent.isColliding = true;
+
+		const float dist = std::sqrt((distSq > 1e-8f) ? distSq : 1e-8f);
+
+		const glm::vec3 localNormal =
+			(dist > 1e-5f)
+			? (d / dist)
+			: glm::vec3(0.0f, 1.0f, 0.0f);
+
+		const glm::vec3 worldNormal =
+			glm::normalize(ToWorldDirNoScale(cylinderTransform, localNormal));
+
+		// Push sphere inward
+		outEvent.collisionNormal = -worldNormal;
+
+		// amount outside container
+		outEvent.penetrationDepth = dist - sphereRadius;
+
+		// nearest point on inner wall
+		outEvent.collisionPoint = ToWorldNoScale(cylinderTransform, closest);
+
+		return true;
+	}
+
 	if (distSq > sphereRadius * sphereRadius)
 	{
 		return false;
@@ -151,6 +226,33 @@ bool SphereCollider::CollideWithCapsule(const CapsuleCollider& capsule, Collisio
 	const glm::vec3 d = localSphere - closest;
 	const float distSq = glm::dot(d, d);
 	const float r = sphereRadius + capsuleRadius;
+	if (IsContainer() && distSq > r * r)
+	{
+		outEvent.isColliding = true;
+
+		const float dist = std::sqrt((distSq > 1e-8f) ? distSq : 1e-8f);
+
+		const glm::vec3 localNormal =
+			(dist > 1e-5f)
+			? (d / dist)
+			: glm::vec3(0.0f, 1.0f, 0.0f);
+
+		const glm::vec3 worldNormal =
+			glm::normalize(ToWorldDirNoScale(capsuleTransform, localNormal));
+
+		// push inward
+		outEvent.collisionNormal = -worldNormal;
+
+		// amount beyond capsule boundary
+		outEvent.penetrationDepth = dist - r;
+
+		// point on capsule surface
+		outEvent.collisionPoint =
+			ToWorldNoScale(capsuleTransform, closest + localNormal * capsuleRadius);
+
+		return true;
+	}
+
 	if (distSq > r * r)
 	{
 		return false;

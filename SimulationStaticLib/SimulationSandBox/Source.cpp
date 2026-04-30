@@ -1,3 +1,4 @@
+#define GLM_ENABLE_EXPERIMENTAL
 #include "Application.h"
 #include <imgui.h>
 #include <backends/imgui_impl_vulkan.h>
@@ -57,6 +58,7 @@
 #include "Capsule.h"
 #include "Scene.h"
 #include "FlatBufferLoader.h"
+#include "SpawnerSystem.h"
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
 
@@ -95,6 +97,9 @@ private:
 	CameraManager _cameraManager;
     textureManager _texManager;
 	Image _imageHelper;
+	Material _defaultMaterial;
+    std::vector<VkDescriptorBufferInfo> _lightingBufferInfos;
+    size_t _uploadedWorldObjectCount = 0;
 
 	//Scenario Management
 	ClearScenario _clearScenario;
@@ -162,6 +167,7 @@ private:
     //Physics
 	PhysicsWorld _physicsWorld;
 	WorldObjectManager _worldObjectManager;
+	std::unique_ptr<SpawnerSystem> _spawnerSystem;
 
 
     //World Forces
@@ -229,7 +235,7 @@ private:
     uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 	VkFormat findDepthFormat();
 	VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
-
+    void uploadNewWorldObjects();
 
     // --- Callbacks ---
     static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
@@ -261,7 +267,6 @@ void HelloTriangleApplication::initVulkan() {
     _swapChainManager.createSwapChain();
     _swapChainManager.createImageViews();
 
-
     const VkExtent2D extent = _swapChainManager.getExtent();
     const float aspect = (extent.height > 0)
         ? static_cast<float>(extent.width) / static_cast<float>(extent.height)
@@ -290,8 +295,6 @@ void HelloTriangleApplication::initVulkan() {
         10.0f,
         ProjectionType::Orthographic
     );
-
-
 
     _cameraManager.addCamera("Perspective", perspectiveCamera);
     _cameraManager.addCamera("Orthographic", orthographicCamera);
@@ -337,8 +340,6 @@ void HelloTriangleApplication::initVulkan() {
 
     _imageHelper = Image(_vulkanContext.getDevice(), _vulkanContext.getPhysicalDevice(), _vulkanContext.getCommandPool(), _vulkanContext.getGraphicsQueue());
 
-
-
     createGraphicsPipeline();
     _vulkanContext.createCommandPool();
     _texManager.initialize(_vulkanContext.getDevice(), _vulkanContext.getPhysicalDevice(), _vulkanContext.getCommandPool(), _vulkanContext.getGraphicsQueue());
@@ -346,104 +347,92 @@ void HelloTriangleApplication::initVulkan() {
     createDepthResources();
     _swapChainManager.createFramebuffers(_renderPassManager.getRenderPass(), depthImageView);
     _syncManager.initialize(&_vulkanContext, &_swapChainManager, MAX_FRAMES_IN_FLIGHT);
-    Material defaultMaterial = Material(glm::vec4(1.0f), 0.0f, 1.0f, _texManager.getTexture("default"));
 
-       if(loader.loadSceneFromFile("scenes/newtonsCradle.bin", scene)) {
-       	scene.createWorldObjects(_worldObjectManager, defaultMaterial);
-       }
+    _defaultMaterial = Material(glm::vec4(1.0f), 0.0f, 1.0f, _texManager.getTexture("default"));
 
-    _worldObjectManager.addPlane(
-        "Ground",
-        glm::vec3(0.0f, -1.0f, 0.0f),
-        glm::vec3(0.0f),
-        glm::vec3(1.0f),
-        10.0f,
-        10.0f,
-        defaultMaterial,
-        glm::vec3(0.0f),
-        0.0f
-    );
+    if (loader.loadSceneFromFile("scenes/newtonsCradle.bin", scene)) {
+        scene.createWorldObjects(_worldObjectManager, _defaultMaterial);
+    }
 
-    _worldObjectManager.addSphere(
-        "Ball1",
-        glm::vec3(-2.0f, 0.0f, 0.0f),
-        glm::vec3(0.0f),
-        glm::vec3(1.0f),
-        0.5f,
-        defaultMaterial,
-        glm::vec3(0.0f),
-        1.0f
-    );
+	//_worldObjectManager.addPlane("Ground", glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f), glm::vec3(10.0f, 1.0f, 10.0f), 10.0f,10.0f, _defaultMaterial, glm::vec3(0.0f), 0.0f);
 
-    _worldObjectManager.addSphere(
-        "Ball2",
-        glm::vec3(0.0f, 0.0f, 0.0f),
-        glm::vec3(0.0f),
-        glm::vec3(1.0f),
-        0.5f,
-        defaultMaterial,
-        glm::vec3(0.0f),
-        1.0f
-	);
+    const glm::vec3 spawnerCenter(0.0f, 5.0f, 0.0f);
+    const float spawnerRadius = 5.0f;
+    const float containerSize = spawnerRadius * 2.0f;
 
-    _worldObjectManager.addCylinder(
-        "Pendulum Rod",
-        glm::vec3(-1.0f, 0.0f, 0.0f),
-        glm::vec3(0.0f),
-        glm::vec3(1.0f),
-        0.5f,
-        2.0f,
-        defaultMaterial,
-        36,
-        glm::vec3(0.0f),
-        1.0f
-    );
+    {
+        WorldObject* container = _worldObjectManager.addCuboid(
+            "ContainmentBox",
+            spawnerCenter,
+            glm::vec3(0.0f),
+            glm::vec3(1.0f),
+            containerSize,
+            containerSize,
+            containerSize,
+            _defaultMaterial,
+            glm::vec3(0.0f),
+            1.0f);
 
-    _worldObjectManager.addCapsule(
-        "Capsule",
-        glm::vec3(1.0f, 0.0f, 0.0f),
-        glm::vec3(0.0f),
-        glm::vec3(4.0f),
-        0.5f,
-        3.0f,
-        defaultMaterial,
-        glm::vec3(0.0f),
-        1.0f
-	);
+        if (container != nullptr) {
+            container->setCollisionType(CollisionType::CONTAINER);
+            if (container->getRigidBody() != nullptr) {
+                container->getRigidBody()->SetStatic(true);
+            }
+        }
+    }
 
+    // Test cylinder spawner (repeating)
+    {
+        SceneSpawner testSpawner;
+        testSpawner.type = SpawnerType::SphereSpawner;
 
+        testSpawner.sphere.base.name = "TestCylinderSpawner";
+        testSpawner.sphere.base.start_time = 0.0f;
+        testSpawner.sphere.base.spawn_type = SpawnType::RepeatingSpawn;
+        testSpawner.sphere.base.repeating_spawn.max_count = 100;
+        testSpawner.sphere.base.repeating_spawn.interval = 1.0f;
 
+        testSpawner.sphere.base.location = SpawnLocation::RandomSphere;
+        testSpawner.sphere.base.random_sphere.center = spawnerCenter;
+        testSpawner.sphere.base.random_sphere.radius = spawnerRadius;
 
+        testSpawner.sphere.base.linear_velocity.min = glm::vec3(0.0f);
+        testSpawner.sphere.base.linear_velocity.max = glm::vec3(0.0f);
+        testSpawner.sphere.base.angular_velocity.min = glm::vec3(0.0f);
+        testSpawner.sphere.base.angular_velocity.max = glm::vec3(0.0f);
 
-	_physicsWorld.setGravity(gravity);
+		testSpawner.sphere.radius_range.min = 0.5f;
+		testSpawner.sphere.radius_range.max = 1.0f;
 
+        scene.spawners.push_back(testSpawner);
+    }
 
+    _spawnerSystem = std::make_unique<SpawnerSystem>(scene, _worldObjectManager, _defaultMaterial);
 
-	//createCloth(30, 30, 0.1f, defaultMaterial);
+    _physicsWorld.setGravity(gravity);
+
     createUniformBuffers();
     createDescriptorPool();
 
-    std::vector<VkDescriptorBufferInfo> lightingBufferInfos(MAX_FRAMES_IN_FLIGHT);
+    _lightingBufferInfos.resize(MAX_FRAMES_IN_FLIGHT);
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        lightingBufferInfos[i].buffer = lightingUniformBuffers[i];
-        lightingBufferInfos[i].offset = 0;
-        lightingBufferInfos[i].range = sizeof(LightingUBO);
+        _lightingBufferInfos[i].buffer = lightingUniformBuffers[i];
+        _lightingBufferInfos[i].offset = 0;
+        _lightingBufferInfos[i].range = sizeof(LightingUBO);
     }
 
- //   for(auto & particle : _clothParticles) {
- //       particle.upload(_vulkanContext, MAX_FRAMES_IN_FLIGHT, defaultMaterial.getTextureImageView(), defaultMaterial.getTextureSampler(), lightingBufferInfos);
-	//}
     _worldObjectManager.uploadWorldObjects(
         _vulkanContext,
         MAX_FRAMES_IN_FLIGHT,
-        defaultMaterial.getTextureImageView(),
-        defaultMaterial.getTextureSampler(),
-        lightingBufferInfos
+        _defaultMaterial.getTextureImageView(),
+        _defaultMaterial.getTextureSampler(),
+        _lightingBufferInfos
     );
+    _uploadedWorldObjectCount = _worldObjectManager.getWorldObjects().size();
+
     createDescriptorSets();
     createCommandBuffers();
     initImGui();
-
 }
 
 void HelloTriangleApplication::drawWorldObjectUI()
@@ -728,7 +717,12 @@ void HelloTriangleApplication::cleanupImGui() {
 
 void HelloTriangleApplication::update(float seconds)
 {
-	_physicsWorld.step(seconds);
+    if (_spawnerSystem)
+    {
+		_spawnerSystem->update(seconds);
+		uploadNewWorldObjects();
+    }
+    _physicsWorld.step(seconds);
 	_worldObjectManager.capturePhysicsState();
 }
 
@@ -827,6 +821,10 @@ void HelloTriangleApplication::mainLoop() {
             const float subStep = fixedStep / static_cast<float>(subSteps);
 
             while (simulationTimeAculator >= fixedStep) {
+                if(_spawnerSystem) {
+                    _spawnerSystem->update(fixedStep);
+					uploadNewWorldObjects();
+				}
                 for (int step = 0; step < subSteps; ++step) {
                     _physicsWorld.step(subStep);
                 }
@@ -983,8 +981,6 @@ void HelloTriangleApplication::createDescriptorSets() {
         throw std::runtime_error("Failed to allocate descriptor sets!");
     }
 
-    Material defaultMaterial = Material(glm::vec4(1.0f), 0.0f, 1.0f, _texManager.getTexture("default"));
-
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         VkDescriptorBufferInfo transformBufferInfo{};
         transformBufferInfo.buffer = uniformBuffers[i];
@@ -993,8 +989,8 @@ void HelloTriangleApplication::createDescriptorSets() {
 
         VkDescriptorImageInfo samplerInfo{};
         samplerInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        samplerInfo.imageView = defaultMaterial.getTextureImageView();
-        samplerInfo.sampler = defaultMaterial.getTextureSampler();
+        samplerInfo.imageView = _defaultMaterial.getTextureImageView();
+        samplerInfo.sampler = _defaultMaterial.getTextureSampler();
 
         VkDescriptorBufferInfo lightingBufferInfo{};
         lightingBufferInfo.buffer = lightingUniformBuffers[i];
@@ -1034,6 +1030,29 @@ void HelloTriangleApplication::createDescriptorSets() {
             0,
             nullptr);
     }
+}
+
+void HelloTriangleApplication::uploadNewWorldObjects()
+{
+    const std::vector<WorldObject*>& worldObjects = _worldObjectManager.getWorldObjects();
+    if (worldObjects.size() <= _uploadedWorldObjectCount) {
+        return;
+    }
+
+    for (size_t i = _uploadedWorldObjectCount; i < worldObjects.size(); ++i) {
+        WorldObject* obj = worldObjects[i];
+        Shape* shape = (obj != nullptr) ? obj->getShape() : nullptr;
+        if (shape != nullptr) {
+            shape->upload(
+                _vulkanContext,
+                MAX_FRAMES_IN_FLIGHT,
+                _defaultMaterial.getTextureImageView(),
+                _defaultMaterial.getTextureSampler(),
+                _lightingBufferInfos);
+        }
+    }
+
+    _uploadedWorldObjectCount = worldObjects.size();
 }
 
 void HelloTriangleApplication::createCommandBuffers() {

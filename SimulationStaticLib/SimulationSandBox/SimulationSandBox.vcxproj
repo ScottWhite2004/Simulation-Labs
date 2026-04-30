@@ -122,7 +122,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;GLM_ENABLE_EXPERIMENTAL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
@@ -190,6 +190,7 @@
     <ClInclude Include="Shape.h" />
     <ClInclude Include="SimulatedObject.h" />
     <ClInclude Include="SingleBurstSpawn.h" />
+    <ClInclude Include="SpawnerSystem.h" />
     <ClInclude Include="Sphere.h" />
     <ClInclude Include="SphereSpawner.h" />
     <ClInclude Include="SwapChainManager.h" />
@@ -254,6 +255,7 @@
     <ClCompile Include="SimulatedObject.cpp" />
     <ClCompile Include="SingleBurstSpawn.cpp" />
     <ClCompile Include="Source.cpp" />
+    <ClCompile Include="SpawnerSystem.cpp" />
     <ClCompile Include="Sphere.cpp" />
     <ClCompile Include="SphereSpawner.cpp" />
     <ClCompile Include="stb_image.cpp" />

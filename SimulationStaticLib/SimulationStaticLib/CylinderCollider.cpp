@@ -100,9 +100,14 @@ glm::vec3 CylinderCollider::calculateLocalInertiaTensor(float mass) const
 
 bool CylinderCollider::IsInside(const glm::vec3& point) const
 {
-	const glm::vec3 d = point - _transform.getPosition();
-	const float radialSq = (d.x * d.x) + (d.z * d.z);
-	return radialSq <= (_radius * _radius) && std::fabs(d.y) <= GetHalfHeight();
+	const glm::vec3 localPoint = ToLocalNoScale(_transform, point);
+	const glm::vec3 scale = GetAbsScale(_transform);
+
+	const float radius = _radius * std::max(scale.x, scale.z);
+	const float halfHeight = (_height * 0.5f) * scale.y;
+
+	const float radialSq = (localPoint.x * localPoint.x) + (localPoint.z * localPoint.z);
+	return radialSq <= (radius * radius) && std::fabs(localPoint.y) <= halfHeight;
 }
 
 bool CylinderCollider::Intersects(const Line& line) const
@@ -158,6 +163,28 @@ bool CylinderCollider::CollideWithCylinder(const CylinderCollider& cylinder, Col
 	const float distSq = SegmentSegmentDistanceSquared(a0, a1, b0, b1, c1, c2);
 	const float radiusSum = radiusA + radiusB;
 
+	if (IsContainer() && distSq > radiusSum * radiusSum)
+	{
+		outEvent.isColliding = true;
+
+		const float dist = std::sqrt(std::max(distSq, 1e-8f));
+
+		const glm::vec3 n =
+			(dist > 1e-5f)
+			? glm::normalize(c2 - c1)
+			: glm::normalize(centerB - centerA);
+
+		// Push back inward
+		outEvent.collisionNormal = -n;
+
+		// Amount outside limit
+		outEvent.penetrationDepth = dist - radiusSum;
+
+		outEvent.collisionPoint = 0.5f * (c1 + c2);
+
+		return true;
+	}
+
 	if (distSq > radiusSum * radiusSum)
 	{
 		return false;
@@ -202,6 +229,28 @@ bool CylinderCollider::CollideWithCapsule(const CapsuleCollider& capsule, Collis
 	glm::vec3 c2;
 	const float distSq = SegmentSegmentDistanceSquared(a0, a1, b0, b1, c1, c2);
 	const float radiusSum = radiusA + radiusB;
+
+	if (IsContainer() && distSq > radiusSum * radiusSum)
+	{
+		outEvent.isColliding = true;
+
+		const float dist = std::sqrt(std::max(distSq, 1e-8f));
+
+		const glm::vec3 n =
+			(dist > 1e-5f)
+			? glm::normalize(c2 - c1)
+			: glm::normalize(centerB - centerA);
+
+		// Push inward
+		outEvent.collisionNormal = -n;
+
+		// Amount beyond allowed limit
+		outEvent.penetrationDepth = dist - radiusSum;
+
+		outEvent.collisionPoint = 0.5f * (c1 + c2);
+
+		return true;
+	}
 
 	if (distSq > radiusSum * radiusSum)
 	{

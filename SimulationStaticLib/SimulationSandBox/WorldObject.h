@@ -43,7 +43,9 @@ public:
 	RigidBody* getRigidBody() const { return _rigidBody; }
 	Shape* getShape() const { return _shape; }
 	const std::string& getName() const { return _name; }
-	void addCollider(Collider* collider) { _collider = collider; }
+	void addCollider(Collider* collider) {
+		_collider = collider; if (_collider) { _collider->SetContainer(collision_type == CollisionType::CONTAINER); }
+	}
 	void addRigidBody(RigidBody* rigidBody) { _rigidBody = rigidBody; }
 	void addShape(Shape* shape) { _shape = shape; }
 	void syncTransform() {
@@ -106,5 +108,7 @@ public:
 			_collider->SetTransform(interpolatedTransform);
 		}
 	}
+
+	void setCollisionType(CollisionType type) { collision_type = type; if (_collider) _collider->SetContainer(collision_type == CollisionType::CONTAINER); }
 };
 

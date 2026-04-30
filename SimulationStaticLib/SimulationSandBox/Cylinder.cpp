@@ -11,9 +11,9 @@ void Cylinder::create() {
 
 		glm::vec3 normal = glm::normalize(glm::vec3(cosTheta, 0.0f, sinTheta));
 		// Bottom circle
-		_localVertices.push_back({ {glm::vec3(x, -_height / 2, z) + getPos()}, {1,1,1}, {static_cast<float>(i) / _segments, 0}, normal });
+		_localVertices.push_back({ {glm::vec3(x, -_height / 2, z)}, {1,1,1}, {static_cast<float>(i) / _segments, 0}, normal });
 		// Top circle
-		_localVertices.push_back({ {glm::vec3(x, _height / 2, z) + getPos()}, {1,1,1}, {static_cast<float>(i) / _segments, 1}, normal });
+		_localVertices.push_back({ {glm::vec3(x, _height / 2, z)}, {1,1,1}, {static_cast<float>(i) / _segments, 1}, normal });
 	}
 	// Create indices
 	for (int i = 0; i < _segments; ++i) {

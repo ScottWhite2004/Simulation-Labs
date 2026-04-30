@@ -1,5 +1,10 @@
 #include "pch.h"
 #include "PhysicsWorld.h"
+#include "PlaneCollider.h"
+#include "SphereCollider.h"
+#include "CuboidCollider.h"
+#include "CylinderCollider.h"
+#include "CapsuleCollider.h"
 #include <algorithm>
 
 void PhysicsWorld::addObject(PhysicsObject* object)
@@ -173,6 +178,12 @@ void PhysicsWorld::handleCollisions(float deltaTime)
 				continue;
 			}
 
+			Collider* aCollider = aObject->GetCollider();
+			Collider* bCollider = bObject->GetCollider();
+			//if (aCollider->IsContainer() || bCollider->IsContainer()) {
+			//	continue;
+			//}
+
 			CollisionEvent event{};
 			if (!aObject->GetCollider()->Collide(*bObject->GetCollider(), event)) {
 				continue;
@@ -191,3 +202,4 @@ void PhysicsWorld::setGravity(const glm::vec3& gravity)
 {
 	_gravity = gravity;
 }
+

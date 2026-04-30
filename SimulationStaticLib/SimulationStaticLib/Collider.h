@@ -17,6 +17,7 @@ class Collider
 {
 protected:
 	Transform _transform;
+	bool _isContainer{ false };
 	static glm::vec3 AbsVec3(const glm::vec3& value)
 	{
 		return glm::vec3(std::fabs(value.x), std::fabs(value.y), std::fabs(value.z));
@@ -73,5 +74,8 @@ public:
 
 	void SetTransform(const Transform& newTransform) { _transform = newTransform; }
 	Transform GetTransform() const { return _transform; }
+
+	void SetContainer(bool isContainer) { _isContainer = isContainer; }
+	bool IsContainer() const { return _isContainer; }
 };
 

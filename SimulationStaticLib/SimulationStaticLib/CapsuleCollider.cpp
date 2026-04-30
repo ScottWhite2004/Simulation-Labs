@@ -116,11 +116,18 @@ glm::vec3 CapsuleCollider::calculateLocalInertiaTensor(float mass) const
 
 bool CapsuleCollider::IsInside(const glm::vec3& point) const
 {
-	const float hs = GetSegmentHalfLength();
-	const float y = Clamp(point.y, _transform.getPosition().y - hs, _transform.getPosition().y + hs);
-	const glm::vec3 closest(_transform.getPosition().x, y, _transform.getPosition().z);
-	const glm::vec3 d = point - closest;
-	return glm::dot(d, d) <= (_radius * _radius);
+	const glm::vec3 localPoint = ToLocalNoScale(_transform, point);
+	const glm::vec3 scale = GetAbsScale(_transform);
+
+	const float radius = _radius * std::max(scale.x, scale.z);
+	const float halfHeight = (_height * 0.5f) * scale.y;
+	const float segmentHalf = std::max(0.0f, halfHeight - radius);
+
+	const float y = Clamp(localPoint.y, -segmentHalf, segmentHalf);
+	const glm::vec3 closest(0.0f, y, 0.0f);
+	const glm::vec3 d = localPoint - closest;
+
+	return glm::dot(d, d) <= (radius * radius);
 }
 
 bool CapsuleCollider::Intersects(const Line& line) const
@@ -183,6 +190,29 @@ bool CapsuleCollider::CollideWithCapsule(const CapsuleCollider& capsule, Collisi
 	glm::vec3 c2;
 	const float distSq = SegmentSegmentDistanceSquared(a0, a1, b0, b1, c1, c2);
 	const float radiusSum = radiusA + radiusB;
+
+	if (IsContainer() && distSq > radiusSum * radiusSum)
+	{
+		outEvent.isColliding = true;
+
+		const float dist = std::sqrt(std::max(distSq, 1e-8f));
+
+		const glm::vec3 n =
+			(dist > 1e-5f)
+			? glm::normalize(c2 - c1)
+			: glm::normalize(centerB - centerA);
+
+		// push inward
+		outEvent.collisionNormal = -n;
+
+		// amount outside allowed range
+		outEvent.penetrationDepth = dist - radiusSum;
+
+		// point on boundary between centers
+		outEvent.collisionPoint = 0.5f * (c1 + c2);
+
+		return true;
+	}
 
 	if (distSq > radiusSum * radiusSum)
 	{

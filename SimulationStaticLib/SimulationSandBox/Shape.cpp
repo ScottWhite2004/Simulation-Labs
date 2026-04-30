@@ -259,6 +259,9 @@ void Shape::destroy(const VulkanContext& ctx) {
 }
 
 void Shape::updateUniformBuffer(uint32_t frameIndex, const glm::mat4& model, const glm::mat4& view, const glm::mat4& proj) const {
+ if (frameIndex >= _uniformBuffersMapped.size() || !_uniformBuffersMapped[frameIndex]) {
+		return;
+	}
 	struct UBO { alignas(16) glm::mat4 m, v, p; } const u{ model, view, proj };
 	std::memcpy(_uniformBuffersMapped[frameIndex], &u, sizeof(u));
 }

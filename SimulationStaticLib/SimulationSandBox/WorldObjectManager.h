@@ -26,7 +26,7 @@ public:
 	~WorldObjectManager() = default;
 
 	void addWorldObject(WorldObject* worldObject) { _worldObjects.push_back(worldObject); }
-	const std::vector<WorldObject*> getWorldObjects() const { return _worldObjects; }
+	const std::vector<WorldObject*>& getWorldObjects() const { return _worldObjects; }
 
 	WorldObject* addSphere(
 		const std::string& name,

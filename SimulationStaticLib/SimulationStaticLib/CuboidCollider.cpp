@@ -77,10 +77,12 @@ glm::vec3 CuboidCollider::calculateLocalInertiaTensor(float mass) const
 
 bool CuboidCollider::IsInside(const glm::vec3& point) const
 {
-	const glm::vec3 h = GetHalfExtents();
-	return std::fabs(point.x - _transform.getPosition().x) <= h.x &&
-		std::fabs(point.y - _transform.getPosition().y) <= h.y &&
-		std::fabs(point.z - _transform.getPosition().z) <= h.z;
+	const glm::vec3 localPoint = ToLocalNoScale(_transform, point);
+	const glm::vec3 halfExtents = GetHalfExtents() * GetAbsScale(_transform);
+
+	return std::fabs(localPoint.x) <= halfExtents.x &&
+		std::fabs(localPoint.y) <= halfExtents.y &&
+		std::fabs(localPoint.z) <= halfExtents.z;
 }
 
 bool CuboidCollider::Intersects(const Line& line) const
@@ -113,20 +115,23 @@ bool CuboidCollider::CollideWithCuboid(const CuboidCollider& cuboid, CollisionEv
 	const glm::vec3 aH = GetHalfExtents() * GetAbsScale(aTransform);
 	const glm::vec3 bH = cuboid.GetHalfExtents() * GetAbsScale(bTransform);
 
-	const glm::vec3 aAxis[3] = {
-		glm::normalize(ToWorldDirNoScale(aTransform, glm::vec3(1.0f, 0.0f, 0.0f))),
-		glm::normalize(ToWorldDirNoScale(aTransform, glm::vec3(0.0f, 1.0f, 0.0f))),
-		glm::normalize(ToWorldDirNoScale(aTransform, glm::vec3(0.0f, 0.0f, 1.0f)))
+	const glm::vec3 aAxis[3] =
+	{
+		glm::normalize(ToWorldDirNoScale(aTransform, glm::vec3(1, 0, 0))),
+		glm::normalize(ToWorldDirNoScale(aTransform, glm::vec3(0, 1, 0))),
+		glm::normalize(ToWorldDirNoScale(aTransform, glm::vec3(0, 0, 1)))
 	};
 
-	const glm::vec3 bAxis[3] = {
-		glm::normalize(ToWorldDirNoScale(bTransform, glm::vec3(1.0f, 0.0f, 0.0f))),
-		glm::normalize(ToWorldDirNoScale(bTransform, glm::vec3(0.0f, 1.0f, 0.0f))),
-		glm::normalize(ToWorldDirNoScale(bTransform, glm::vec3(0.0f, 0.0f, 1.0f)))
+	const glm::vec3 bAxis[3] =
+	{
+		glm::normalize(ToWorldDirNoScale(bTransform, glm::vec3(1, 0, 0))),
+		glm::normalize(ToWorldDirNoScale(bTransform, glm::vec3(0, 1, 0))),
+		glm::normalize(ToWorldDirNoScale(bTransform, glm::vec3(0, 0, 1)))
 	};
 
 	float R[3][3];
 	float AbsR[3][3];
+
 	const float epsilon = 1e-6f;
 
 	for (int i = 0; i < 3; ++i)
@@ -139,10 +144,63 @@ bool CuboidCollider::CollideWithCuboid(const CuboidCollider& cuboid, CollisionEv
 	}
 
 	const glm::vec3 tWorld = bTransform.getPosition() - aTransform.getPosition();
+
 	const glm::vec3 t(
 		glm::dot(tWorld, aAxis[0]),
 		glm::dot(tWorld, aAxis[1]),
 		glm::dot(tWorld, aAxis[2]));
+
+	// ============================================================
+	// CONTAINER MODE (this cuboid is hollow, other cuboid must stay inside)
+	// ============================================================
+	if (IsContainer())
+	{
+		float minEscape = FLT_MAX;
+		glm::vec3 bestNormal(1, 0, 0);
+
+		for (int i = 0; i < 3; ++i)
+		{
+			// projection of B half extents onto A axis i
+			const float rb =
+				bH.x * AbsR[i][0] +
+				bH.y * AbsR[i][1] +
+				bH.z * AbsR[i][2];
+
+			// amount beyond container wall
+			const float outside = std::fabs(t[i]) + rb - aH[i];
+
+			if (outside > 0.0f)
+			{
+				if (outside < minEscape)
+				{
+					minEscape = outside;
+
+					glm::vec3 n = aAxis[i];
+
+					// inward push
+					if (t[i] > 0.0f)
+						n = -n;
+
+					bestNormal = n;
+				}
+			}
+		}
+
+		if (minEscape < FLT_MAX)
+		{
+			outEvent.isColliding = true;
+			outEvent.collisionNormal = bestNormal;
+			outEvent.penetrationDepth = minEscape;
+			outEvent.collisionPoint = bTransform.getPosition();
+			return true;
+		}
+
+		return false; // fully inside container
+	}
+
+	// ============================================================
+	// NORMAL SOLID OBB vs OBB SAT
+	// ============================================================
 
 	float minOverlap = FLT_MAX;
 	glm::vec3 minAxis = aAxis[0];
@@ -156,73 +214,93 @@ bool CuboidCollider::CollideWithCuboid(const CuboidCollider& cuboid, CollisionEv
 			}
 		};
 
+	// A face axes
 	for (int i = 0; i < 3; ++i)
 	{
 		const float ra = aH[i];
-		const float rb = bH.x * AbsR[i][0] + bH.y * AbsR[i][1] + bH.z * AbsR[i][2];
+
+		const float rb =
+			bH.x * AbsR[i][0] +
+			bH.y * AbsR[i][1] +
+			bH.z * AbsR[i][2];
+
 		const float dist = std::fabs(t[i]);
 		const float overlap = ra + rb - dist;
 
 		if (overlap < 0.0f)
-		{
 			return false;
-		}
+
 		UpdateMin(aAxis[i], overlap);
 	}
 
+	// B face axes
 	for (int j = 0; j < 3; ++j)
 	{
-		const float ra = aH.x * AbsR[0][j] + aH.y * AbsR[1][j] + aH.z * AbsR[2][j];
+		const float ra =
+			aH.x * AbsR[0][j] +
+			aH.y * AbsR[1][j] +
+			aH.z * AbsR[2][j];
+
 		const float rb = bH[j];
+
 		const float dist = std::fabs(glm::dot(tWorld, bAxis[j]));
 		const float overlap = ra + rb - dist;
 
 		if (overlap < 0.0f)
-		{
 			return false;
-		}
+
 		UpdateMin(bAxis[j], overlap);
 	}
 
+	// Cross-product axes
 	for (int i = 0; i < 3; ++i)
 	{
 		for (int j = 0; j < 3; ++j)
 		{
-			const glm::vec3 axis = glm::cross(aAxis[i], bAxis[j]);
+			glm::vec3 axis = glm::cross(aAxis[i], bAxis[j]);
+
 			const float axisLenSq = glm::dot(axis, axis);
+
 			if (axisLenSq < 1e-8f)
-			{
 				continue;
-			}
+
+			axis = glm::normalize(axis);
 
 			const int i1 = (i + 1) % 3;
 			const int i2 = (i + 2) % 3;
 			const int j1 = (j + 1) % 3;
 			const int j2 = (j + 2) % 3;
 
-			const float ra = aH[i1] * AbsR[i2][j] + aH[i2] * AbsR[i1][j];
-			const float rb = bH[j1] * AbsR[i][j2] + bH[j2] * AbsR[i][j1];
-			const float dist = std::fabs(t[i2] * R[i1][j] - t[i1] * R[i2][j]);
+			const float ra =
+				aH[i1] * AbsR[i2][j] +
+				aH[i2] * AbsR[i1][j];
+
+			const float rb =
+				bH[j1] * AbsR[i][j2] +
+				bH[j2] * AbsR[i][j1];
+
+			const float dist =
+				std::fabs(t[i2] * R[i1][j] - t[i1] * R[i2][j]);
+
 			const float overlap = ra + rb - dist;
 
 			if (overlap < 0.0f)
-			{
 				return false;
-			}
-			UpdateMin(glm::normalize(axis), overlap);
+
+			UpdateMin(axis, overlap);
 		}
 	}
 
 	glm::vec3 normal = minAxis;
+
 	if (glm::dot(normal, tWorld) < 0.0f)
-	{
 		normal = -normal;
-	}
 
 	outEvent.isColliding = true;
 	outEvent.collisionNormal = normal;
 	outEvent.penetrationDepth = minOverlap;
 	outEvent.collisionPoint = 0.5f * (aTransform.getPosition() + bTransform.getPosition());
+
 	return true;
 }
 
@@ -248,6 +326,32 @@ bool CuboidCollider::CollideWithCylinder(const CylinderCollider& cylinder, Colli
 	glm::vec3 closestSeg;
 	glm::vec3 closestBox;
 	const float distSq = ClosestPointSegmentAABB(localStart, localEnd, halfExtents, closestSeg, closestBox);
+	if (IsContainer() && distSq > radius * radius)
+	{
+		outEvent.isColliding = true;
+
+		const float dist = std::sqrt(std::max(distSq, 1e-8f));
+
+		const glm::vec3 localNormal =
+			(dist > 1e-5f)
+			? (closestSeg - closestBox) / dist
+			: glm::vec3(0.0f, 1.0f, 0.0f);
+
+		const glm::vec3 worldNormal =
+			glm::normalize(ToWorldDirNoScale(boxTransform, localNormal));
+
+		// Push back inside container
+		outEvent.collisionNormal = -worldNormal;
+
+		// Amount outside allowed boundary
+		outEvent.penetrationDepth = dist - radius;
+
+		// Contact point on inner wall
+		outEvent.collisionPoint = ToWorldNoScale(boxTransform, closestBox);
+
+		return true;
+	}
+
 	if (distSq > radius * radius)
 	{
 		return false;
@@ -288,6 +392,32 @@ bool CuboidCollider::CollideWithCapsule(const CapsuleCollider& capsule, Collisio
 	glm::vec3 closestSeg;
 	glm::vec3 closestBox;
 	const float distSq = ClosestPointSegmentAABB(localStart, localEnd, halfExtents, closestSeg, closestBox);
+	if (IsContainer() && distSq > radius * radius)
+	{
+		outEvent.isColliding = true;
+
+		const float dist = std::sqrt(std::max(distSq, 1e-8f));
+
+		const glm::vec3 localNormal =
+			(dist > 1e-5f)
+			? (closestSeg - closestBox) / dist
+			: glm::vec3(0.0f, 1.0f, 0.0f);
+
+		const glm::vec3 worldNormal =
+			glm::normalize(ToWorldDirNoScale(boxTransform, localNormal));
+
+		// Push object back inside
+		outEvent.collisionNormal = -worldNormal;
+
+		// Amount beyond container boundary
+		outEvent.penetrationDepth = dist - radius;
+
+		// Contact point on inner wall
+		outEvent.collisionPoint = ToWorldNoScale(boxTransform, closestBox);
+
+		return true;
+	}
+
 	if (distSq > radius * radius)
 	{
 		return false;
